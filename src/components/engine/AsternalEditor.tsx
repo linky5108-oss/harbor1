@@ -123,10 +123,19 @@ export function AsternalEditor({ initialProjectId, beta = false }: {
     setProjectId(id);
     setCurrentProjectId(id);
     let loaded = loadProjectById(id) ?? loadProject();
-    if (loaded) {
-      loaded.scenes = loaded.scenes.map(s => ensureSceneLayers(s));
-      loaded = syncRuntimeAndTexturesToProject(loaded);
-      saveProjectById(id, loaded);
+    try {
+      if (loaded) {
+        loaded.scenes = loaded.scenes.map(s => ensureSceneLayers(s));
+        loaded = syncRuntimeAndTexturesToProject(loaded);
+        saveProjectById(id, loaded);
+      }
+    } catch (err) {
+      console.error("[editor] proyecto dañado, se usa uno nuevo", err);
+      loaded = loadProject();
+    }
+    // Si la escena activa no existe (proyecto antiguo o incompleto) se abre la primera.
+    if (loaded && loaded.scenes?.length && !loaded.scenes.some(s => s.id === loaded!.activeSceneId)) {
+      loaded = { ...loaded, activeSceneId: loaded.scenes[0].id };
     }
     lastSavedRef.current = loaded;
     setDirty(false);
