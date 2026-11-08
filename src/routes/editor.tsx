@@ -4,7 +4,8 @@ import { AsternalEditor } from "@/components/engine/AsternalEditor";
 import { writeLastEditorMode } from "@/lib/engine/last-editor-mode";
 
 export const Route = createFileRoute("/editor")({
-  validateSearch: (search: Record<string, unknown>) => ({
+  validateSearch: (search: Record<string, unknown>): { p?: string; beta?: boolean; mode?: string } => ({
+    mode: typeof search.mode === "string" && search.mode ? search.mode : undefined,
     p: typeof search.p === "string" && search.p ? search.p : undefined,
     beta: search.beta === true || search.beta === "1" ? true : undefined,
   }),

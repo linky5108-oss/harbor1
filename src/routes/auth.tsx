@@ -2,7 +2,7 @@ import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { SignInSide } from "@/components/auth/SignInSide";
 
 export const Route = createFileRoute("/auth")({
-  validateSearch: (search: Record<string, unknown>) => ({
+  validateSearch: (search: Record<string, unknown>): { returnTo?: string } => ({
     returnTo: typeof search.returnTo === "string" ? search.returnTo : "/",
   }),
   head: () => ({ meta: [{ title: "Asternal — Acceso a la plataforma" }] }),
