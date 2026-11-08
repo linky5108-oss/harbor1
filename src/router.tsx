@@ -19,8 +19,10 @@ export const getRouter = () => {
     const href = router.history.location?.href || router.state.location?.href || "/";
     recordVisit(href);
   };
-  syncLocalHistory();
-  router.history.subscribe(syncLocalHistory);
+  if (typeof window !== "undefined") {
+    syncLocalHistory();
+    router.history.subscribe(syncLocalHistory);
+  }
 
   return router;
 };
