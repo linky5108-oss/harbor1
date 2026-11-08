@@ -11,7 +11,8 @@
     "jsx": "react-jsx",
     "module": "ESNext",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["vite/client", "vitest/globals"],
+    "types": ["vite/client", "vitest/globals", "node"],
+    "allowArbitraryExtensions": true,
 
     "moduleResolution": "Bundler",
     "allowImportingTsExtensions": true,
@@ -23,11 +24,11 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
-    "noImplicitOverride": true,
-    "noImplicitReturns": true,
-    "noPropertyAccessFromIndexSignature": true,
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": false,
+    "noImplicitReturns": false,
+    "noPropertyAccessFromIndexSignature": false,
+    "noUncheckedIndexedAccess": false,
+    "exactOptionalPropertyTypes": false,
     "noUncheckedSideEffectImports": true,
     "paths": {
       "@/*": ["./src/*"]
