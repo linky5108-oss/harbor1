@@ -65,10 +65,10 @@
   --crayon-wax-highlight: rgba(255, 253, 244, 0.85);
   --crayon-wax-pattern: repeating-linear-gradient(
     -14deg,
-    rgba(255, 255, 255, 0.24) 0px,
-    rgba(255, 255, 255, 0.24) 2px,
-    rgba(45, 36, 28, 0.025) 2px,
-    rgba(45, 36, 28, 0.025) 5px
+    rgba(255, 255, 255, 0.07) 0px,
+    rgba(255, 255, 255, 0.07) 2px,
+    rgba(45, 36, 28, 0.01) 2px,
+    rgba(45, 36, 28, 0.01) 5px
   );
 
   /* ── Lienzo de papel de dibujo cálido y tintas de crayón (claro) ── */
@@ -155,10 +155,10 @@
   --crayon-wax-highlight: rgba(255, 250, 235, 0.12);
   --crayon-wax-pattern: repeating-linear-gradient(
     -14deg,
-    rgba(255, 255, 255, 0.045) 0px,
-    rgba(255, 255, 255, 0.045) 2px,
-    rgba(0, 0, 0, 0.10) 2px,
-    rgba(0, 0, 0, 0.10) 5px
+    rgba(255, 255, 255, 0.015) 0px,
+    rgba(255, 255, 255, 0.015) 2px,
+    rgba(0, 0, 0, 0.035) 2px,
+    rgba(0, 0, 0, 0.035) 5px
   );
 
   --canvas: oklch(0.19 0.024 258);
