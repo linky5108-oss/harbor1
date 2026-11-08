@@ -184,9 +184,9 @@ export const OrionAiModeScreen: React.FC<OrionAiModeScreenProps> = ({
           aiPatch = extracted.patch;
         }
 
-        const aiScripts = normalizeScripts(extracted.scripts).filter((s) =>
-          ENTITY_EVENTS.includes(s.event),
-        );
+        // Sin límites: se aceptan todos los scripts de la IA, aunque usen
+        // eventos o mecánicas que el editor visual no ofrece.
+        const aiScripts = normalizeScripts(extracted.scripts);
         if (aiScripts.length > 0) {
           generated = aiScripts;
         }
@@ -204,11 +204,8 @@ export const OrionAiModeScreen: React.FC<OrionAiModeScreenProps> = ({
         ).filter((s) => ENTITY_EVENTS.includes(s.event));
       }
 
-      const rawEffectiveJs = aiCustomJs
-        ? localCompiled.hasSpecificMatch && !aiCustomJs.includes(localCompiled.programId)
-          ? `${localCompiled.compiledJs}\n\n${aiCustomJs}`
-          : aiCustomJs
-        : generated[0]?.compiledJs || localCompiled.compiledJs;
+      // El código libre de la IA tiene prioridad y no se mezcla con plantillas del editor.
+      const rawEffectiveJs = aiCustomJs || generated[0]?.compiledJs || localCompiled.compiledJs;
 
       const effectiveCompiledJs = sanitizeOrUpgradeHtml5ScriptJs(
         rawEffectiveJs,
