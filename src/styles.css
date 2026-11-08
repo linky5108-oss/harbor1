@@ -1,42 +1,14 @@
-/*
- * Tailwind v4 entry: config lives here, with no tailwind.config.js or PostCSS plugin.
- * - Keep every @import in this top block, above @theme and the rest of the file. Install an
- *   npm package before @importing its CSS. Never @import a remote URL (web fonts, CDN CSS): the
- *   build resolves @import from the filesystem. Load those with a <link> in the head() of
- *   src/routes/__root.tsx and name the family in a --font-* token in @theme inline below.
- */
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
-/*
- * Design system definition.
- *
- * The design lives in this file: oklch color tokens on the shadcn variables
- * (--background, --foreground, --primary, --secondary, --muted, --accent, ...) plus
- * new tokens as needed, font tokens, and custom styles and animations.
- *
- * The @theme inline block maps CSS custom properties to Tailwind utility
- * classes (e.g. --color-primary -> bg-primary, text-primary).
- *
- * The :root and .dark blocks define the actual color values using oklch.
- * All colors MUST use oklch format.
- *
- * To add a new semantic color:
- * 1. Add the variable to :root (light value) and .dark (dark value)
- * 2. Register it in @theme inline as --color-<name>: var(--<name>)
- */
-
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
+  --radius-xl: var(--radius);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -45,6 +17,7 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-glow: var(--primary-glow);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -57,90 +30,201 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-ring-offset-background: var(--background);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+  --color-grid: var(--grid);
+
+  /* ── Asternal design system tokens (DESIGN.md) ── */
+  --color-canvas: var(--canvas);
+  --color-surface: var(--card);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-azure: var(--azure);
+  --color-blue-600: var(--blue-600);
+  --color-success: var(--success);
+  --color-warn: var(--warn);
+  /* Tinta de estado: tono con el que el rol se lee sobre superficie (claro). */
+  --color-success-ink: var(--success-ink);
+  --color-error-ink: var(--error-ink);
+  --color-warn-ink: var(--warn-ink);
+
+  --font-display: "Fredoka", "Comic Neue", "Space Grotesk", "Inter", system-ui, sans-serif;
+  --font-sans: "Comic Neue", "Fredoka", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, "SF Mono", monospace;
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
-  --accent-foreground: oklch(0.208 0.042 265.755);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.704 0.04 256.788);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.984 0.003 247.858);
-  --sidebar-foreground: oklch(0.129 0.042 264.695);
-  --sidebar-primary: oklch(0.208 0.042 265.755);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.968 0.007 247.896);
-  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-border: oklch(0.929 0.013 255.508);
-  --sidebar-ring: oklch(0.704 0.04 256.788);
+  --radius: 1.1rem;
+  --crayon-radius-card: 20px 10px 18px 12px / 12px 18px 10px 20px;
+  --crayon-radius-btn: 255px 18px 225px 18px / 18px 225px 18px 255px;
+  --crayon-radius-input: 16px 8px 14px 10px / 10px 14px 8px 16px;
+  --crayon-ink-border: oklch(0.27 0.035 55);
+  --crayon-shadow-color: oklch(0.25 0.035 55 / 0.88);
+  --crayon-wax-highlight: rgba(255, 253, 244, 0.85);
+  --crayon-wax-pattern: repeating-linear-gradient(
+    -14deg,
+    rgba(255, 255, 255, 0.07) 0px,
+    rgba(255, 255, 255, 0.07) 2px,
+    rgba(45, 36, 28, 0.01) 2px,
+    rgba(45, 36, 28, 0.01) 5px
+  );
+
+  /* ── Lienzo de papel de dibujo cálido y tintas de crayón (claro) ── */
+  --canvas: oklch(0.976 0.018 85);
+  --background: oklch(0.976 0.018 85);
+  --foreground: oklch(0.23 0.032 52);
+  --ink: oklch(0.23 0.032 52);
+  --ink-2: oklch(0.42 0.034 54);
+  --ink-3: oklch(0.55 0.030 56);
+
+  /* ── Superficies de cartulina y cuaderno ── */
+  --card: oklch(0.992 0.010 85);
+  --card-foreground: oklch(0.23 0.032 52);
+  --surface-2: oklch(0.952 0.024 84);
+  --popover: oklch(0.994 0.010 85);
+  --popover-foreground: oklch(0.23 0.032 52);
+
+  /* ── Crayones vibrantes (Azul Cobalto, Celeste, Coral, Esmeralda, Amarillo Sol) ── */
+  --primary: oklch(0.54 0.20 256);
+  --primary-foreground: #fffdf7;
+  --primary-glow: oklch(0.64 0.18 250);
+  --blue-600: oklch(0.46 0.21 262);
+  --azure: oklch(0.66 0.16 236);
+  --violet-accent: oklch(0.58 0.21 290);
+  --cyan-accent: oklch(0.64 0.15 208);
+  --accent: oklch(0.93 0.045 82);
+  --accent-foreground: oklch(0.38 0.18 258);
+
+  --secondary: oklch(0.946 0.024 84);
+  --secondary-foreground: oklch(0.25 0.034 52);
+
+  --muted: oklch(0.946 0.022 84);
+  --muted-foreground: oklch(0.45 0.032 54);
+
+  /* ── Trazos de crayón y estados ── */
+  --line: oklch(0.32 0.035 55);
+  --line-strong: oklch(0.24 0.038 52);
+  --border: var(--line);
+  --input: oklch(0.34 0.035 55);
+  --ring: oklch(0.54 0.20 256 / 0.42);
+  --grid: oklch(0.30 0.04 254 / 0.10);
+  --destructive: oklch(0.58 0.22 26);
+  --destructive-foreground: #fffdf7;
+  --success: oklch(0.60 0.18 150);
+  --warn: oklch(0.72 0.17 76);
+
+  /* ── Sombras sólidas tipo trazo de crayón (sin difuminado borroso) ── */
+  --shadow-xs: 1.5px 2px 0px 0px var(--crayon-shadow-color);
+  --shadow-sm: 2px 3px 0px 0px var(--crayon-shadow-color);
+  --shadow-md: 3px 4px 0px 0px var(--crayon-shadow-color);
+  --shadow-lg: 4px 5px 0px 0px var(--crayon-shadow-color);
+  --shadow-xl: 6px 7px 0px 0px var(--crayon-shadow-color);
+
+  --shadow-float: 4px 6px 0px 0px var(--crayon-shadow-color);
+  --shadow-glow: 3px 4px 0px 0px oklch(0.36 0.18 260);
+
+  /* ── Textura de crayón de marca ── */
+  --gradient-asternal: linear-gradient(
+    135deg,
+    var(--blue-600) 0%,
+    var(--primary) 52%,
+    var(--azure) 100%
+  );
+  --gradient-asternal-soft: linear-gradient(
+    135deg,
+    oklch(0.54 0.20 256 / 0.15) 0%,
+    oklch(0.66 0.16 236 / 0.12) 100%
+  );
+  --gradient-asternal-deep: linear-gradient(
+    135deg,
+    oklch(0.30 0.11 264) 0%,
+    oklch(0.46 0.21 262) 55%,
+    oklch(0.54 0.20 256) 100%
+  );
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-smooth: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .dark {
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
-  --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.929 0.013 255.508);
-  --primary-foreground: oklch(0.208 0.042 265.755);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+  --radius: 1.1rem;
+  --crayon-ink-border: oklch(0.78 0.04 82);
+  --crayon-shadow-color: oklch(0.10 0.02 260 / 0.95);
+  --crayon-wax-highlight: rgba(255, 250, 235, 0.12);
+  --crayon-wax-pattern: repeating-linear-gradient(
+    -14deg,
+    rgba(255, 255, 255, 0.015) 0px,
+    rgba(255, 255, 255, 0.015) 2px,
+    rgba(0, 0, 0, 0.035) 2px,
+    rgba(0, 0, 0, 0.035) 5px
+  );
+
+  --canvas: oklch(0.19 0.024 258);
+  --background: oklch(0.19 0.024 258);
+  --foreground: oklch(0.95 0.018 85);
+  --ink: oklch(0.95 0.018 85);
+  --ink-2: oklch(0.80 0.022 82);
+  --ink-3: oklch(0.64 0.024 254);
+
+  --card: oklch(0.24 0.028 258);
+  --card-foreground: oklch(0.95 0.018 85);
+  --surface-2: oklch(0.28 0.030 258);
+  --popover: oklch(0.25 0.028 258);
+  --popover-foreground: oklch(0.95 0.018 85);
+
+  --primary: oklch(0.66 0.18 252);
+  --primary-foreground: oklch(0.16 0.03 258);
+  --primary-glow: oklch(0.76 0.15 242);
+  --blue-600: oklch(0.56 0.20 260);
+  --azure: oklch(0.74 0.14 234);
+  --violet-accent: oklch(0.70 0.18 286);
+  --cyan-accent: oklch(0.74 0.13 206);
+  --accent: oklch(0.30 0.048 258);
+  --accent-foreground: oklch(0.88 0.09 246);
+
+  --secondary: oklch(0.28 0.028 258);
+  --secondary-foreground: oklch(0.94 0.016 85);
+
+  --muted: oklch(0.27 0.026 258);
+  --muted-foreground: oklch(0.74 0.022 82);
+
+  --line: oklch(0.56 0.038 254);
+  --line-strong: oklch(0.74 0.042 82);
+  --border: var(--line);
+  --input: oklch(0.56 0.038 254);
+  --ring: oklch(0.66 0.18 252 / 0.48);
+  --grid: oklch(0.92 0.02 85 / 0.08);
+
+  --destructive: oklch(0.64 0.20 25);
+  --destructive-foreground: #fffdf7;
+  --success: oklch(0.70 0.16 152);
+  --warn: oklch(0.78 0.16 78);
+
+  --gradient-asternal: linear-gradient(
+    135deg,
+    oklch(0.54 0.19 260) 0%,
+    oklch(0.66 0.18 252) 52%,
+    oklch(0.74 0.14 234) 100%
+  );
+  --gradient-asternal-soft: linear-gradient(
+    135deg,
+    oklch(0.66 0.18 252 / 0.20) 0%,
+    oklch(0.74 0.14 234 / 0.14) 100%
+  );
+  --gradient-asternal-deep: linear-gradient(
+    135deg,
+    oklch(0.25 0.06 262) 0%,
+    oklch(0.44 0.18 260) 100%
+  );
+
+  --shadow-xs: 1.5px 2px 0px 0px var(--crayon-shadow-color);
+  --shadow-sm: 2px 3px 0px 0px var(--crayon-shadow-color);
+  --shadow-md: 3px 4px 0px 0px var(--crayon-shadow-color);
+  --shadow-lg: 4px 5px 0px 0px var(--crayon-shadow-color);
+  --shadow-float: 4px 6px 0px 0px var(--crayon-shadow-color);
+  --shadow-glow: 3px 4px 0px 0px oklch(0.66 0.18 252 / 0.72);
 }
 
 @layer base {
@@ -148,8 +232,857 @@
     border-color: var(--color-border);
   }
 
+  html, body, #root {
+    height: 100%;
+  }
+
+  html {
+    /* Corta cualquier desborde horizontal (nunca scroll lateral por 100vw). */
+    overflow-x: clip;
+  }
+
   body {
-    background-color: var(--color-background);
+    /* Lienzo de papel dibujado sin filter ni backdrop-filter en la raíz para
+       respetar <RULE[AGENTS_md]> y mantener navegación y portales fijos al viewport. */
+    background-color: var(--canvas);
+    background-image:
+      radial-gradient(oklch(0.35 0.04 55 / 0.07) 1px, transparent 0),
+      radial-gradient(oklch(0.55 0.14 254 / 0.05) 1px, transparent 0);
+    background-size: 24px 24px, 36px 36px;
+    background-position: 0 0, 12px 12px;
     color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+    touch-action: manipulation;
+    letter-spacing: 0.01em;
+    overflow-x: clip;
+  }
+
+  /* Imágenes, vídeos e iframes nunca desbordan su contenedor. */
+  img, video, iframe, canvas, svg {
+    max-width: 100%;
+  }
+
+  /* iOS: evita el zoom automático al enfocar inputs pequeños. */
+  @media (max-width: 767px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]),
+    textarea, select {
+      font-size: 16px;
+    }
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.015em;
+    font-weight: 700;
+  }
+
+  :focus-visible {
+    outline: 2.5px dashed var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--color-primary) 22%, transparent);
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+  textarea,
+  select {
+    background-color: var(--glass-fill-strong);
+    background-image: var(--crayon-wax-pattern);
+    border: 2px solid var(--crayon-ink-border);
+    border-radius: var(--crayon-radius-input);
+    box-shadow: var(--shadow-xs);
+  }
+}
+
+/* ═══════════ ASTERNAL CRAYON SURFACE SYSTEM (ESTILOS PRINCIPALES PUROS) ═══════════ */
+
+/* Superficie estándar dibujada tipo crayola: borde orgánico directo sin redibujado encima. */
+@utility surface {
+  background-color: var(--glass-fill);
+  background-image: var(--crayon-wax-pattern);
+  border: 2.5px solid var(--crayon-ink-border);
+  border-radius: var(--crayon-radius-card);
+  box-shadow: var(--glass-highlight), var(--shadow-md);
+}
+
+/* Superficie inset (fondos de inputs, filas seleccionadas, menús). */
+@utility surface-2 {
+  background-color: var(--glass-fill-soft);
+  background-image: var(--crayon-wax-pattern);
+  border: 2px solid var(--glass-edge-muted);
+  border-radius: var(--crayon-radius-input);
+  box-shadow: var(--glass-highlight);
+}
+
+/* Hairline: trazo fino de crayón. */
+@utility hairline {
+  border: 2px solid var(--color-border);
+}
+
+/* El degradado oficial de Asternal para texto. */
+@utility text-gradient {
+  background: var(--gradient-asternal);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* La CTA principal de la pantalla: coloreada con crayón de cera directo. */
+@utility btn-grad {
+  background-color: var(--primary);
+  background-image: var(--crayon-wax-pattern), var(--gradient-asternal);
+  color: var(--color-primary-foreground);
+  border: 2.5px solid var(--crayon-ink-border);
+  border-radius: var(--crayon-radius-btn);
+  box-shadow: var(--glass-highlight), var(--shadow-sm);
+  font-family: var(--font-display);
+  font-weight: 700;
+  transition: transform 120ms var(--ease-out-expo), box-shadow 120ms var(--ease-out-expo);
+}
+.btn-grad:hover {
+  border-color: var(--crayon-ink-border);
+  transform: translate(-1px, -1px);
+  box-shadow: var(--glass-highlight), var(--shadow-md);
+}
+.btn-grad:active {
+  transform: translate(1px, 2px);
+  box-shadow: var(--shadow-xs);
+}
+
+/* Micro-label de sección. */
+@utility section-label {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted-foreground);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Chip estándar dibujado con crayón. */
+@utility chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: var(--crayon-radius-btn);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 11.5px;
+  padding: 4px 11px;
+  background-color: var(--color-muted);
+  background-image: var(--crayon-wax-pattern);
+  color: var(--color-ink);
+  border: 2px solid var(--crayon-ink-border);
+  box-shadow: 1.5px 2px 0px 0px var(--crayon-shadow-color);
+  white-space: nowrap;
+}
+
+/* Feedback de toque. */
+@utility press {
+  transition: transform 120ms var(--ease-out-expo);
+}
+.press:active {
+  transform: translate(1px, 2px);
+}
+
+/* ============ Compat: utilidades previas adaptadas a crayola pura ============ */
+@utility glow-text {
+  text-shadow: none;
+}
+
+@utility glow-border {
+  box-shadow: var(--shadow-md);
+  border: 2.5px solid var(--crayon-ink-border);
+}
+
+@utility panel {
+  background-color: var(--glass-fill);
+  background-image: var(--crayon-wax-pattern);
+  border: 2.5px solid var(--crayon-ink-border);
+  box-shadow: var(--glass-highlight), var(--shadow-md);
+  border-radius: var(--crayon-radius-card);
+}
+
+@utility neu-raised {
+  background-color: var(--glass-fill);
+  background-image: var(--crayon-wax-pattern);
+  border: 2.5px solid var(--crayon-ink-border);
+  box-shadow: var(--glass-highlight), var(--shadow-md);
+  border-radius: var(--crayon-radius-card);
+}
+
+@utility neu-inset {
+  background-color: var(--glass-fill-soft);
+  background-image: var(--crayon-wax-pattern);
+  border: 2px solid var(--glass-edge-muted);
+  border-radius: var(--crayon-radius-input);
+  box-shadow: inset 1.5px 2px 0px rgba(0, 0, 0, 0.08);
+}
+
+@utility neu-btn {
+  background-color: var(--glass-fill-strong);
+  background-image: var(--crayon-wax-pattern);
+  border: 2px solid var(--crayon-ink-border);
+  box-shadow: var(--glass-highlight), var(--shadow-sm);
+  border-radius: var(--crayon-radius-btn);
+  font-family: var(--font-display);
+  transition: transform 120ms var(--ease-out-smooth), box-shadow 120ms var(--ease-out-smooth);
+}
+.neu-btn:hover {
+  background-color: var(--m3-surface-high);
+  transform: translate(-1px, -1px);
+  box-shadow: var(--glass-highlight), var(--shadow-md);
+}
+.neu-btn:active {
+  box-shadow: var(--shadow-xs);
+  transform: translate(1px, 2px);
+}
+
+@utility hover-lift {
+  transition: transform 140ms var(--ease-out-expo), box-shadow 140ms var(--ease-out-expo);
+}
+.hover-lift:hover {
+  transform: translate(-1px, -2px);
+  box-shadow: var(--shadow-lg);
+}
+
+@utility press-scale {
+  transition: transform 120ms var(--ease-out-expo);
+}
+.press-scale:active {
+  transform: translate(1px, 2px);
+}
+
+@utility cyber-grid {
+  background-image:
+    linear-gradient(var(--color-grid) 1.5px, transparent 1.5px),
+    linear-gradient(90deg, var(--color-grid) 1.5px, transparent 1.5px);
+  background-size: 28px 28px;
+}
+
+/* ============ Refinamiento visual crayón (grano + tiles) ============ */
+
+.grad-brand {
+  background-image: var(--crayon-wax-pattern), var(--gradient-asternal);
+}
+.grad-brand-soft {
+  background-image: var(--crayon-wax-pattern), var(--gradient-asternal-soft);
+}
+.grad-brand-deep {
+  background-image: var(--crayon-wax-pattern), var(--gradient-asternal-deep);
+}
+
+/* Firma superior de tarjetas en trazo de crayón */
+.grad-brand-fade {
+  background-image: linear-gradient(
+    to right,
+    oklch(0.52 0.19 258) 0%,
+    oklch(0.62 0.16 242) 45%,
+    oklch(0.72 0.15 76) 75%,
+    transparent 100%
+  );
+}
+
+/* ============ Banner destacado ============ */
+.banner-overlay-deep {
+  background: linear-gradient(
+    to top,
+    oklch(0.22 0.06 260 / 0.92) 0%,
+    oklch(0.28 0.07 256 / 0.42) 40%,
+    oklch(0.32 0.06 248 / 0.12) 75%,
+    transparent 100%
+  );
+}
+
+.banner-glow {
+  box-shadow: var(--shadow-md);
+}
+.banner-glow-halo {
+  pointer-events: none;
+  box-shadow: none;
+  opacity: 0;
+}
+
+@keyframes banner-shine {
+  0% { transform: translateX(-160%) skewX(-16deg); }
+  55%, 100% { transform: translateX(320%) skewX(-16deg); }
+}
+.banner-shine {
+  position: absolute;
+  top: -10%;
+  bottom: -10%;
+  left: 0;
+  width: 34%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 253, 240, 0.18) 50%, transparent 100%);
+  animation: banner-shine 14s ease-in-out infinite;
+  will-change: transform;
+}
+
+.badge-glow {
+  box-shadow: 2px 3px 0px 0px var(--crayon-shadow-color);
+}
+
+.noise-overlay {
+  background-image: var(--crayon-wax-pattern);
+}
+
+/* Tile de juego sin portada: hoja cuadriculada de cuaderno escolar */
+.tile-blueprint {
+  background-color: var(--m3-surface-high);
+  background-image:
+    linear-gradient(var(--grid) 1.5px, transparent 1.5px),
+    linear-gradient(90deg, var(--grid) 1.5px, transparent 1.5px);
+  background-size: 24px 24px, 24px 24px;
+  border: 2px dashed var(--crayon-ink-border);
+  box-shadow: none;
+}
+.tile-blueprint:hover {
+  background-color: var(--m3-surface-highest);
+  border-style: solid;
+}
+
+@utility glass {
+  background-color: var(--glass-fill);
+  background-image: var(--crayon-wax-pattern);
+  border: 2.5px solid var(--crayon-ink-border);
+  border-radius: var(--crayon-radius-card);
+  box-shadow: var(--glass-highlight), var(--shadow-md);
+}
+
+@utility glass-btn {
+  background-color: var(--glass-fill-strong);
+  background-image: var(--crayon-wax-pattern);
+  border: 2px solid var(--crayon-ink-border);
+  border-radius: var(--crayon-radius-btn);
+  box-shadow: var(--glass-highlight), var(--shadow-sm);
+  color: var(--color-foreground);
+  font-family: var(--font-display);
+  transition: transform 120ms cubic-bezier(0.32, 0.72, 0, 1), box-shadow 120ms ease;
+}
+@utility glass-btn-hover {
+  background-color: var(--m3-surface-highest);
+  box-shadow: var(--glass-highlight), var(--shadow-md);
+}
+
+@utility glass-surface {
+  background-color: var(--glass-fill);
+  background-image: var(--crayon-wax-pattern);
+  border: 2.5px solid var(--crayon-ink-border);
+  border-radius: var(--crayon-radius-card);
+  box-shadow: var(--glass-highlight), var(--shadow-md);
+}
+
+@utility glass-control {
+  background-color: var(--glass-fill-strong);
+  background-image: var(--crayon-wax-pattern);
+  border: 2px solid var(--crayon-ink-border);
+  border-radius: var(--crayon-radius-btn);
+  box-shadow: var(--glass-highlight), var(--shadow-sm);
+  transition: transform 120ms var(--ease-out-expo), box-shadow 120ms var(--ease-out-expo);
+}
+.glass-control:hover {
+  background-color: var(--m3-surface-high);
+  border-color: var(--line-strong);
+  transform: translate(-1px, -1px);
+  box-shadow: var(--glass-highlight), var(--shadow-md);
+}
+.glass-control:active {
+  transform: translate(1px, 2px);
+  box-shadow: var(--shadow-xs);
+}
+.glass-control:focus-visible {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+@utility glass-menu {
+  background-color: var(--popover);
+  background-image: var(--crayon-wax-pattern);
+  border: 2.5px solid var(--crayon-ink-border);
+  border-radius: var(--crayon-radius-card);
+  box-shadow: var(--glass-highlight), var(--shadow-lg);
+}
+
+@utility glass-header {
+  background-color: var(--m3-surface);
+  background-image: var(--crayon-wax-pattern);
+  border-bottom: 2.5px solid var(--crayon-ink-border);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: none;
+}
+
+@utility glass-primary {
+  border: 2.5px solid var(--crayon-ink-border);
+  border-radius: var(--crayon-radius-btn);
+  box-shadow: var(--glass-highlight), var(--shadow-sm);
+}
+.glass-primary:hover {
+  box-shadow: var(--glass-highlight), var(--shadow-md);
+}
+
+@utility glass-destructive {
+  border: 2.5px solid var(--crayon-ink-border);
+  border-radius: var(--crayon-radius-btn);
+  box-shadow: var(--glass-highlight), var(--shadow-sm);
+}
+
+@utility glass-ghost {
+  border: 2px solid transparent;
+  border-radius: var(--crayon-radius-btn);
+  transition: transform 120ms var(--ease-out-expo), background-color 120ms ease, border-color 120ms ease;
+}
+.glass-ghost:hover {
+  background-color: var(--glass-fill-soft);
+  border-color: var(--crayon-ink-border);
+}
+
+.app-header { box-shadow: var(--shadow-sm); }
+
+@media (prefers-reduced-motion: reduce) {
+  .glass-control, .glass-btn, .neu-btn, .btn-grad, .glass-ghost, .banner-shine, .badge-glow { transition-duration: 0ms; animation: none !important; }
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+/* ============ Header stability — kills the "tambaleo" on scroll ============ */
+.app-header {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  /* Solo contención de LAYOUT: `paint` recorta todo lo que sobresalga del
+     marco de la cabecera, y ahí dentro viven botones con elevación M3 cuyas
+     sombras quedaban cortadas. El aislamiento de layout se mantiene. */
+  contain: layout;
+}
+
+/* ============ Plus: name effects ============ */
+@keyframes name-rainbow-anim {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+@keyframes name-pulse-anim {
+  0%, 100% { text-shadow: 0 0 6px oklch(0.72 0.15 245 / 0.55); }
+  50%      { text-shadow: 0 0 14px oklch(0.72 0.15 245 / 0.95), 0 0 22px oklch(0.72 0.15 245 / 0.55); }
+}
+
+.name-fx { display: inline-block; position: relative; }
+
+.name-fx-glow {
+  color: oklch(0.52 0.16 250);
+  text-shadow: 0 0 8px oklch(0.72 0.15 245 / 0.8);
+}
+.dark .name-fx-glow {
+  color: oklch(0.76 0.14 245);
+}
+.name-fx-rainbow {
+  background: linear-gradient(90deg,
+    #ff5e7a, #ffb84d, #ffe45c, #7dff9f, #4dd6ff, #a97dff, #ff5e7a);
+  background-size: 200% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  color: transparent;
+  animation: name-rainbow-anim 6s linear infinite;
+}
+.name-fx-gradient {
+  background: linear-gradient(90deg, oklch(0.55 0.16 262), oklch(0.72 0.15 320), oklch(0.64 0.12 220));
+  background-size: 200% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  color: transparent;
+  animation: name-rainbow-anim 5s linear infinite;
+}
+.name-fx-pulse {
+  color: oklch(0.52 0.16 262);
+  animation: name-pulse-anim 2.2s ease-in-out infinite;
+}
+.name-fx-shadow {
+  color: oklch(0.22 0.03 260);
+  text-shadow: 2px 2px 0 oklch(0.68 0.14 220 / 0.6);
+}
+.name-fx-neon {
+  color: oklch(0.47 0.14 200);
+  text-shadow:
+    0 0 4px oklch(0.72 0.16 195 / 0.85),
+    0 0 10px oklch(0.68 0.14 220 / 0.6);
+}
+
+/* Sombra y Neón no pueden usar un solo color para los dos temas: sobre la
+   superficie oscura la sombra casi negra desaparecía y sobre la clara el neón
+   blanco se volvía invisible. Cada efecto define su variante por tema. */
+.dark .name-fx-shadow {
+  color: oklch(0.88 0.02 262);
+  text-shadow: 2px 2px 0 oklch(0.6 0.1 240 / 0.65);
+}
+.dark .name-fx-pulse {
+  color: oklch(0.82 0.12 255);
+}
+.dark .name-fx-neon {
+  color: oklch(0.98 0 0);
+  text-shadow:
+    0 0 4px oklch(0.72 0.16 195),
+    0 0 8px oklch(0.72 0.16 195),
+    0 0 14px oklch(0.68 0.14 220),
+    0 0 22px oklch(0.68 0.14 220 / 0.7);
+}
+
+/* ============ Plus: marcos de avatar ============
+   Sin degradados ni animaciones de borde: cada marco es un color SÓLIDO de la
+   paleta Material 3 de Plus (--plus-frame-* en glass.css), aplicado en
+   línea como anillo plano por PostCard y ProfilePanel. */
+
+
+
+/* ============ Post entrance effects ============ */
+@keyframes post-fx-sparkle-anim {
+  0%   { box-shadow: 0 0 0 0 oklch(0.75 0.14 220 / 0); }
+  30%  { box-shadow: 0 0 24px 6px oklch(0.75 0.14 220 / 0.55); }
+  100% { box-shadow: 0 0 0 0 oklch(0.75 0.14 220 / 0); }
+}
+@keyframes post-fx-wave-anim {
+  0%   { transform: translateY(20px); opacity: 0; }
+  60%  { transform: translateY(-4px); opacity: 1; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+@keyframes post-fx-glow-anim {
+  0%, 100% { box-shadow: 0 0 0 0 oklch(0.68 0.14 220 / 0); }
+  50%      { box-shadow: 0 0 36px 4px oklch(0.68 0.14 220 / 0.5); }
+}
+@keyframes post-fx-confetti-anim {
+  0%   { transform: scale(0.94) rotate(-1deg); opacity: 0; }
+  60%  { transform: scale(1.02) rotate(0.5deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+.post-fx-sparkle { animation: post-fx-sparkle-anim 2.2s ease-out 1; }
+.post-fx-wave    { animation: post-fx-wave-anim 700ms cubic-bezier(0.22, 1, 0.36, 1) 1; }
+.post-fx-glow    { animation: post-fx-glow-anim 2.4s ease-in-out 1; }
+.post-fx-confetti{ animation: post-fx-confetti-anim 650ms cubic-bezier(0.22, 1, 0.36, 1) 1; }
+.post-fx-fade-up { animation: fade-in-up 700ms cubic-bezier(0.22, 1, 0.36, 1) 1; }
+
+/* Transitions between editor sections
+   SIN blur: animar filter por frame repintaba todo el panel → lag perceptible
+   en móvil. Ahora solo opacity + translateY (un pase de composición, GPU). */
+@keyframes tab-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+@keyframes panel-slide-right {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0);    }
+}
+@keyframes panel-slide-left {
+  from { opacity: 0; transform: translateX(-24px); }
+  to   { opacity: 1; transform: translateX(0);     }
+}
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1);    }
+}
+@utility view-fade {
+  animation: tab-enter 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity;
+}
+@utility view-slide-right {
+  animation: panel-slide-right 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@utility view-slide-left {
+  animation: panel-slide-left 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@utility pop-in {
+  animation: pop-in 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+
+
+/* ============ Modern animation utilities ============ */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+@keyframes gentle-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.55; }
+}
+@utility anim-fade-in-up {
+  animation: fade-in-up 320ms var(--ease-out-expo) both;
+}
+@utility anim-fade-in {
+  animation: fade-in 320ms var(--ease-out-smooth) both;
+}
+@utility anim-scale-in {
+  animation: scale-in 260ms var(--ease-out-expo) both;
+}
+@utility anim-float {
+  animation: float 3.6s ease-in-out infinite;
+}
+@utility anim-shimmer {
+  background: linear-gradient(
+    90deg,
+    oklch(0.95 0.005 250) 0%,
+    oklch(0.98 0.005 250) 50%,
+    oklch(0.95 0.005 250) 100%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+/* Entrada de tarjetas del feed: animación CSS pura (opacity + translateY, sin
+   scale) — un solo pase de composición, sin medición de layout por frame y sin
+   framer-motion por tarjeta. Corta (300ms) para que la sección cargue sin
+   sensación de retraso. */
+@keyframes card-enter {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@utility card-enter {
+  animation: card-enter 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* NOTA: se eliminó content-visibility de las tarjetas del feed. Con
+   contain-intrinsic-size: auto 420px, las tarjetas fuera de pantalla tenían un
+   alto de reserva falso; al abrir un menú (⋮) el navegador repintaba el
+   viewport, las renderizaba a su alto real y TODO el feed saltaba de posición
+   de golpe (layout shift + reflow → lag). Las tarjetas miden su alto real. */
+
+/* ============ Auth page: confetti ============ */
+@keyframes confetti-fall {
+  0% {
+    opacity: 1;
+    transform: translateY(0) translateX(0) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(400px) translateX(var(--drift, 40px)) rotate(720deg);
+  }
+}
+@keyframes confetti-flash {
+  0% { opacity: 0; transform: scale(0); }
+  30% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.5); }
+}
+@keyframes animate-coin-collect {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  50% { opacity: 0.8; transform: translateY(-20px) scale(1.5); }
+  100% { opacity: 0; transform: translateY(-40px) scale(0.5); }
+}
+.animate-coin-collect {
+  animation: animate-coin-collect 0.6s ease-out both;
+}
+
+/* ============ Auth page: slide transitions ============ */
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(20px) scale(0.98); filter: blur(4px); }
+  to   { opacity: 1; transform: translateX(0) scale(1); filter: blur(0); }
+}
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-20px) scale(0.98); filter: blur(4px); }
+  to   { opacity: 1; transform: translateX(0) scale(1); filter: blur(0); }
+}
+@keyframes slide-in-up {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); filter: blur(3px); }
+  to   { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
+.animate-form-slide {
+  animation-duration: 350ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation-fill-mode: both;
+}
+
+/* ============ Auth page: subtle background drift ============ */
+@keyframes drift-slow {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%      { transform: translate(2%, 1.5%) scale(1.02); }
+  66%      { transform: translate(-1.5%, -1%) scale(0.98); }
+}
+
+.duration-400 { transition-duration: 400ms; }
+
+/* ============ Auth page: gentle rotation for shapes ============ */
+@keyframes rotate-gentle {
+  0% { transform: rotate(0deg); }
+  25% { transform: rotate(2deg); }
+  75% { transform: rotate(-2deg); }
+  100% { transform: rotate(0deg); }
+}
+
+/* ============ Auth page animations ============ */
+@keyframes float-particle {
+  0%, 100% { transform: translateY(0) scale(1); opacity: 0.4; }
+  25%      { transform: translateY(-18px) scale(1.15); opacity: 0.7; }
+  50%      { transform: translateY(-8px) scale(0.95); opacity: 0.5; }
+  75%      { transform: translateY(-24px) scale(1.05); opacity: 0.8; }
+}
+@keyframes float-icon {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25%      { transform: translateY(-10px) rotate(4deg); }
+  50%      { transform: translateY(-4px) rotate(-2deg); }
+  75%      { transform: translateY(-14px) rotate(3deg); }
+}
+@keyframes shimmer-border {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes led-rotate {
+  0%   { --angle: 0deg; }
+  100% { --angle: 360deg; }
+}
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes shimmer-text {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+.animate-shimmer-border {
+  animation: shimmer-border 6s ease-in-out infinite;
+}
+.animate-shimmer-text {
+  background-size: 200% 100%;
+  animation: shimmer-text 4s linear infinite;
+}
+
+.ease-out-expo {
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Smooth cursor blink */
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0; }
+}
+.animate-cursor-blink {
+  animation: cursor-blink 1s step-end infinite;
+}
+
+/* ============ Auth hero: twinkle stars ============ */
+@keyframes twinkle {
+  0%, 100% { opacity: 0.1; transform: scale(0.75); }
+  50%      { opacity: 0.9; transform: scale(1.3); }
+}
+
+/* ============ Auth hero: gentle vertical bob ============ */
+@keyframes bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+@keyframes bob-slow {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+
+/* ============ Auth hero: orbital rotation ============ */
+@keyframes orbit-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes orbit-slow-rev {
+  from { transform: rotate(360deg); }
+  to   { transform: rotate(0deg); }
+}
+
+/* ============ Responsive global: todas las pantallas ============ */
+
+/* Safe-areas para móviles con notch (iPhone, Android gestural). */
+@utility safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+@utility safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@utility safe-left {
+  padding-left: env(safe-area-inset-left, 0px);
+}
+@utility safe-right {
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+/* Alturas de 100% del viewport dinámico (evita el salto con la barra del navegador). */
+@utility h-dvh {
+  height: 100dvh;
+}
+
+/* Punto de ruptura universal: pantallas muy pequeñas (<360px). */
+@media (max-width: 359px) {
+  .app-compact {
+    --app-gap: 2px;
+  }
+  .panel {
+    border-radius: 0.875rem;
+  }
+}
+
+/* El header sticky nunca debe desbordar: .header-name usa flex-1 + min-w-0 y
+   truncate en sus hijos, así el nombre se corta solo sin empujar los botones.
+   (Antes un max-width dejaba un hueco que separaba la píldora de orbes y el ☰
+   del borde derecho en móvil.) */
+@media (max-width: 639px) {
+  .app-header .header-name {
+    min-width: 0;
+  }
+}
+
+/* La preview ya reserva el espacio del dispositivo fuera de la aplicación.
+   Solo una app instalada necesita su propia separación del indicador inferior. */
+.home-bottom-nav { padding-bottom: 0; }
+@media (display-mode: standalone) {
+  .home-bottom-nav { padding-bottom: env(safe-area-inset-bottom, 0px); }
+}
+
+/* ═══════════ Texto de carga del buscador (HaloSearchInput) ═══════════ */
+/* Onda por carácter: retardo y duración llegan por estilo inline. */
+.halo-char {
+  display: inline-block;
+  animation: halo-char-pulse var(--ease-out-expo) infinite;
+}
+@keyframes halo-char-pulse {
+  0% { opacity: 0.2; }
+  45% { opacity: 1; }
+  100% { opacity: 0.2; }
+}
+
+/* ============ Rendimiento: reduce motion ============ */
+@media (prefers-reduced-motion: reduce) {
+  .halo-char,
+  .banner-shine,
+  .banner-glow,
+  .banner-glow-halo,
+  .badge-glow,
+  .animate-float-icon,
+  .animate-shimmer-text,
+  .animate-shimmer-border,
+  [style*="bob"],
+  [style*="twinkle"],
+  [style*="orbit-slow"],
+  [style*="orbit-slow-rev"],
+  [style*="drift-slow"] {
+    animation: none !important;
   }
 }

@@ -1,0 +1,595 @@
+/* ============================================================================
+   ASTERNAL · SISTEMA DE SUPERFICIES DIBUJADAS TIPO CRAYOLA (ESTILOS PRINCIPALES)
+   ─────────────────────────────────────────────────────────────────
+   Sistema visual hecho 100% con estilos CSS principales (sin capas de
+   redibujado encima ni SVG/Canvas superpuestos):
+   - Lienzo de papel de cuaderno sin filtro en la raíz (para mantener navegación
+     y portales anclados al viewport conforme a <RULE[AGENTS_md]>).
+   - Tarjetas, paneles y botones con bordes orgánicos asimétricos tipo crayón,
+     textura de cera en CSS puro y sombras desplazadas sólidas.
+   ========================================================================== */
+
+:root {
+  --radius: 1.1rem;
+  --crayon-radius-card: 20px 10px 18px 12px / 12px 18px 10px 20px;
+  --crayon-radius-btn: 255px 18px 225px 18px / 18px 225px 18px 255px;
+  --crayon-radius-input: 16px 8px 14px 10px / 10px 14px 8px 16px;
+  --crayon-ink-border: oklch(0.27 0.035 55);
+  --crayon-shadow-color: oklch(0.25 0.035 55 / 0.88);
+  --crayon-wax-highlight: rgba(255, 253, 244, 0.85);
+  --crayon-wax-pattern: repeating-linear-gradient(
+    -14deg,
+    rgba(255, 255, 255, 0.07) 0px,
+    rgba(255, 255, 255, 0.07) 2px,
+    rgba(45, 36, 28, 0.01) 2px,
+    rgba(45, 36, 28, 0.01) 5px
+  );
+
+  /* ── Superficies y elevación de papel y crayón (claro) ── */
+  --m3-surface-lowest: oklch(0.996 0.008 85);
+  --m3-surface-low: oklch(0.988 0.012 85);
+  --m3-surface: oklch(0.980 0.016 85);
+  --m3-surface-high: oklch(0.958 0.024 84);
+  --m3-surface-highest: oklch(0.938 0.030 83);
+  --m3-outline: oklch(0.27 0.035 55);
+  --m3-outline-variant: oklch(0.42 0.034 55);
+
+  --m3-elev-1: 2px 3px 0px 0px var(--crayon-shadow-color);
+  --m3-elev-2: 3px 4px 0px 0px var(--crayon-shadow-color);
+  --m3-elev-3: 5px 6px 0px 0px var(--crayon-shadow-color);
+
+  /* ── Lienzo cálido de dibujo y tintas de carbón/crayón ── */
+  --canvas: oklch(0.976 0.018 85);
+  --background: oklch(0.976 0.018 85);
+  --foreground: oklch(0.23 0.032 52);
+  --ink: oklch(0.23 0.032 52);
+  --ink-2: oklch(0.42 0.034 54);
+  --ink-3: oklch(0.55 0.030 56);
+
+  /* ── Tarjetas y paneles en cartulina de dibujo ── */
+  --card: oklch(0.992 0.010 85);
+  --card-foreground: oklch(0.23 0.032 52);
+  --surface-2: oklch(0.952 0.024 84);
+  --popover: oklch(0.994 0.010 85);
+  --popover-foreground: oklch(0.23 0.032 52);
+
+  /* ── Colores de crayón (Azul Cobalto, Celeste, Coral, Esmeralda, Sol) ── */
+  --primary: oklch(0.54 0.20 256);
+  --primary-foreground: #fffdf7;
+  --primary-glow: oklch(0.64 0.18 250);
+  --blue-600: oklch(0.46 0.21 262);
+  --azure: oklch(0.66 0.16 236);
+
+  --accent: oklch(0.93 0.045 82);
+  --accent-foreground: oklch(0.38 0.18 258);
+  --secondary: oklch(0.946 0.024 84);
+  --secondary-foreground: oklch(0.25 0.034 52);
+  --muted: oklch(0.946 0.022 84);
+  --muted-foreground: oklch(0.45 0.032 54);
+
+  /* ── Bordes dibujados y estados ── */
+  --line: oklch(0.32 0.035 55);
+  --line-strong: oklch(0.24 0.038 52);
+  --border: var(--line);
+  --input: oklch(0.34 0.035 55);
+  --ring: oklch(0.54 0.20 256 / 0.42);
+
+  --destructive: oklch(0.58 0.22 26);
+  --destructive-foreground: #fffdf7;
+  --success: oklch(0.60 0.18 150);
+  --warn: oklch(0.72 0.17 76);
+  --success-ink: oklch(0.44 0.15 150);
+  --error-ink: oklch(0.48 0.20 26);
+  --warn-ink: oklch(0.52 0.16 74);
+
+  /* ── Tokens de superficie mapeados a Cera / Crayola (cero blur) ── */
+  --glass-fill: oklch(0.992 0.010 85);
+  --glass-fill-strong: oklch(0.996 0.008 85);
+  --glass-fill-soft: oklch(0.956 0.022 84);
+  --glass-edge-muted: var(--crayon-ink-border);
+  --glass-highlight: inset 0 2px 0 0 var(--crayon-wax-highlight);
+  --glass-shadow: 3px 4px 0px 0px var(--crayon-shadow-color);
+  --glass-blur: none;
+  --glass-hot-edge: var(--crayon-wax-highlight);
+  --glass-blue-edge: oklch(0.54 0.20 256);
+  --glass-deep-shadow: 5px 6px 0px 0px var(--crayon-shadow-color);
+  --glass-control-shadow: 2px 3px 0px 0px var(--crayon-shadow-color);
+  --glass-base: var(--canvas);
+  --glass-btn-fill: var(--gradient-asternal);
+  --asternal-control-gradient: var(--gradient-asternal);
+
+  /* ── Asternal Plus (crayón turquesa) ── */
+  --plus: oklch(0.54 0.14 206);
+  --plus-on-primary: #fffdf7;
+  --plus-container: oklch(0.93 0.05 202);
+  --plus-on-container: oklch(0.26 0.07 210);
+  --plus-outline: oklch(0.32 0.06 208);
+  --plus-frame-aurora: oklch(0.68 0.14 202);
+  --plus-frame-ocean: oklch(0.58 0.15 232);
+  --plus-frame-ice: oklch(0.82 0.09 200);
+  --plus-frame-neon: oklch(0.74 0.15 192);
+}
+
+.dark {
+  --crayon-ink-border: oklch(0.78 0.04 82);
+  --crayon-shadow-color: oklch(0.10 0.02 260 / 0.95);
+  --crayon-wax-highlight: rgba(255, 250, 235, 0.12);
+  --crayon-wax-pattern: repeating-linear-gradient(
+    -14deg,
+    rgba(255, 255, 255, 0.015) 0px,
+    rgba(255, 255, 255, 0.015) 2px,
+    rgba(0, 0, 0, 0.035) 2px,
+    rgba(0, 0, 0, 0.035) 5px
+  );
+
+  --m3-surface-lowest: oklch(0.17 0.024 258);
+  --m3-surface-low: oklch(0.21 0.026 258);
+  --m3-surface: oklch(0.24 0.028 258);
+  --m3-surface-high: oklch(0.28 0.030 258);
+  --m3-surface-highest: oklch(0.32 0.032 258);
+  --m3-outline: oklch(0.78 0.04 82);
+  --m3-outline-variant: oklch(0.58 0.038 254);
+
+  --m3-elev-1: 2px 3px 0px 0px var(--crayon-shadow-color);
+  --m3-elev-2: 3px 4px 0px 0px var(--crayon-shadow-color);
+  --m3-elev-3: 5px 6px 0px 0px var(--crayon-shadow-color);
+
+  --canvas: oklch(0.19 0.024 258);
+  --background: oklch(0.19 0.024 258);
+  --foreground: oklch(0.95 0.018 85);
+  --ink: oklch(0.95 0.018 85);
+  --ink-2: oklch(0.80 0.022 82);
+  --ink-3: oklch(0.64 0.024 254);
+
+  --card: oklch(0.24 0.028 258);
+  --card-foreground: oklch(0.95 0.018 85);
+  --surface-2: oklch(0.28 0.030 258);
+  --popover: oklch(0.25 0.028 258);
+  --popover-foreground: oklch(0.95 0.018 85);
+
+  --primary: oklch(0.66 0.18 252);
+  --primary-foreground: oklch(0.16 0.03 258);
+  --primary-glow: oklch(0.76 0.15 242);
+  --blue-600: oklch(0.56 0.20 260);
+  --azure: oklch(0.74 0.14 234);
+
+  --accent: oklch(0.30 0.048 258);
+  --accent-foreground: oklch(0.88 0.09 246);
+  --secondary: oklch(0.28 0.028 258);
+  --secondary-foreground: oklch(0.94 0.016 85);
+  --muted: oklch(0.27 0.026 258);
+  --muted-foreground: oklch(0.74 0.022 82);
+
+  --line: oklch(0.56 0.038 254);
+  --line-strong: oklch(0.78 0.04 82);
+  --border: var(--line);
+  --input: oklch(0.56 0.038 254);
+  --ring: oklch(0.66 0.18 252 / 0.48);
+
+  --destructive: oklch(0.64 0.20 25);
+  --destructive-foreground: #fffdf7;
+  --success: oklch(0.70 0.16 152);
+  --warn: oklch(0.78 0.16 78);
+  --success-ink: oklch(0.76 0.15 152);
+  --error-ink: oklch(0.74 0.18 25);
+  --warn-ink: oklch(0.82 0.15 78);
+
+  --glass-fill: oklch(0.24 0.028 258);
+  --glass-fill-strong: oklch(0.27 0.030 258);
+  --glass-fill-soft: oklch(0.21 0.025 258);
+  --glass-edge-muted: var(--crayon-ink-border);
+  --glass-highlight: inset 0 2px 0 0 var(--crayon-wax-highlight);
+  --glass-shadow: 3px 4px 0px 0px var(--crayon-shadow-color);
+  --glass-blur: none;
+  --glass-hot-edge: var(--crayon-wax-highlight);
+  --glass-blue-edge: oklch(0.66 0.18 252);
+  --glass-deep-shadow: 5px 6px 0px 0px var(--crayon-shadow-color);
+  --glass-control-shadow: 2px 3px 0px 0px var(--crayon-shadow-color);
+
+  --plus: oklch(0.78 0.12 200);
+  --plus-on-primary: oklch(0.18 0.04 210);
+  --plus-container: oklch(0.29 0.055 210);
+  --plus-on-container: oklch(0.92 0.05 200);
+  --plus-outline: oklch(0.76 0.09 205);
+  --plus-frame-aurora: oklch(0.78 0.12 200);
+  --plus-frame-ocean: oklch(0.68 0.13 228);
+  --plus-frame-ice: oklch(0.92 0.05 195);
+  --plus-frame-neon: oklch(0.84 0.13 190);
+}
+
+/* ─── Superficies individuales dibujadas tipo Crayola (respetando <RULE[AGENTS_md]>) ─── */
+:is(
+  .glass,
+  .glass-surface,
+  .panel,
+  .surface,
+  .m3-card,
+  .plus-glass-hero,
+  .plus-glass-card,
+  .plus-glass-note,
+  .notification-summary-surface,
+  .notification-category-panel,
+  .notification-empty-state
+) {
+  background-color: var(--glass-fill);
+  background-image: var(--crayon-wax-pattern);
+  border: 2.5px solid var(--crayon-ink-border);
+  border-radius: var(--crayon-radius-card);
+  box-shadow: var(--glass-highlight), var(--glass-shadow);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* ─── Controles y botones principales con trazo directo de crayón (sin redibujado) ─── */
+:is(.glass-control, .glass-btn, .neu-btn) {
+  background-color: var(--glass-fill-strong);
+  background-image: var(--crayon-wax-pattern);
+  border: 2px solid var(--crayon-ink-border);
+  border-radius: var(--crayon-radius-btn);
+  box-shadow: var(--glass-highlight), var(--glass-control-shadow);
+  font-family: var(--font-display);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+:is(.glass-menu, [role="dialog"], [role="menu"], [role="listbox"], [data-radix-popper-content-wrapper] > *) {
+  background-color: var(--popover);
+  background-image: var(--crayon-wax-pattern);
+  border: 2.5px solid var(--crayon-ink-border);
+  border-radius: var(--crayon-radius-card);
+  box-shadow: var(--glass-highlight), var(--glass-deep-shadow);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* ─── Inputs y campos compuestos en estilo crayola ───────────────────────── */
+:is(input, textarea, select):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]) {
+  border-radius: var(--crayon-radius-input);
+  background-color: var(--glass-fill-strong);
+  background-image: var(--crayon-wax-pattern);
+  border: 2px solid var(--crayon-ink-border);
+  box-shadow: var(--glass-highlight), 1.5px 2px 0px 0px var(--crayon-shadow-color);
+  transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+}
+
+:is(input, textarea, select):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):focus-visible {
+  border-color: var(--primary);
+  box-shadow: var(--glass-highlight), 2px 3px 0px 0px var(--primary);
+  outline: none;
+}
+
+.search-field input:focus-visible {
+  border-color: transparent;
+  box-shadow: none;
+  outline: none;
+}
+
+:is(.glass-control, .search-field) :is(input, textarea, select) {
+  background-color: transparent !important;
+  background-image: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  caret-color: var(--primary);
+  min-width: 0;
+}
+
+:is(.glass-control, .search-field) :is(input, textarea, select):focus,
+:is(.glass-control, .search-field) :is(input, textarea, select):focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+/* ─── Botones y utilidades Material 3 / Crayola ──────────────────────────── */
+.m3-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.5rem;
+  padding: 0 1.25rem;
+  border-radius: var(--crayon-radius-btn);
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 700;
+  background-color: var(--primary);
+  background-image: var(--crayon-wax-pattern), var(--gradient-asternal);
+  color: var(--primary-foreground);
+  border: 2.5px solid var(--crayon-ink-border);
+  box-shadow: var(--glass-highlight), var(--shadow-sm);
+  transition: transform 120ms var(--ease-out-expo), box-shadow 120ms ease;
+}
+.m3-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--glass-highlight), var(--shadow-md);
+}
+.m3-btn:active {
+  transform: translate(1px, 2px);
+  box-shadow: var(--shadow-xs);
+}
+.m3-btn.m3-btn-outlined {
+  background-color: var(--glass-fill-strong);
+  background-image: var(--crayon-wax-pattern);
+  color: var(--primary);
+  border: 2px solid var(--crayon-ink-border);
+  box-shadow: var(--glass-highlight), var(--shadow-xs);
+}
+.m3-icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--crayon-radius-btn);
+  color: var(--ink);
+  border: 2px solid transparent;
+  transition: background-color 140ms ease, transform 120ms ease, border-color 140ms ease;
+}
+.m3-icon-btn:hover {
+  background-color: var(--glass-fill-soft);
+  border-color: var(--crayon-ink-border);
+}
+.m3-icon-btn:active {
+  transform: translate(1px, 2px);
+}
+
+.m3-surface-lowest { background-color: var(--m3-surface-lowest); }
+.m3-surface-highest { background-color: var(--m3-surface-highest); }
+.m3-elev-1 { box-shadow: var(--m3-elev-1); }
+.m3-elev-2 { box-shadow: var(--m3-elev-2); }
+.m3-elev-3 { box-shadow: var(--m3-elev-3); }
+.m3-card {
+  border-radius: var(--crayon-radius-card);
+}
+.m3-card-outlined {
+  background-color: var(--glass-fill-soft);
+  background-image: var(--crayon-wax-pattern);
+  border: 2px solid var(--crayon-ink-border);
+  border-radius: var(--crayon-radius-card);
+  box-shadow: var(--shadow-xs);
+}
+.m3-state { transition: background-color 0.15s ease; }
+.m3-state:hover { background-color: color-mix(in oklab, var(--primary) 12%, transparent); }
+.m3-state:active { background-color: color-mix(in oklab, var(--primary) 20%, transparent); }
+.m3-scroll-x {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 0.75rem;
+  margin-block: -0.75rem;
+  scrollbar-width: none;
+}
+.m3-scroll-x::-webkit-scrollbar { display: none; }
+.m3-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 2rem;
+  padding: 0 0.875rem;
+  border-radius: var(--crayon-radius-btn);
+  font-family: var(--font-display);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  background-color: var(--glass-fill);
+  background-image: var(--crayon-wax-pattern);
+  border: 2px solid var(--crayon-ink-border);
+  box-shadow: var(--glass-highlight), var(--shadow-xs);
+  color: var(--ink);
+}
+.m3-chip-selected {
+  background-color: color-mix(in oklab, var(--primary) 20%, var(--glass-fill-strong));
+  border-color: var(--crayon-ink-border);
+  color: var(--primary);
+}
+.m3-list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.5rem;
+  padding: 0 1rem;
+  border-radius: var(--crayon-radius-input);
+}
+.m3-text-field, .m3-text-field-outlined {
+  width: 100%;
+  height: 3rem;
+  padding: 0 1rem;
+  border-radius: var(--crayon-radius-input);
+}
+.m3-display-large { font-family: var(--font-display); font-size: 3.5rem; line-height: 4rem; font-weight: 700; }
+.m3-headline-small { font-family: var(--font-display); font-size: 1.5rem; line-height: 2rem; font-weight: 700; }
+.m3-title-medium { font-family: var(--font-display); font-size: 1rem; line-height: 1.5rem; font-weight: 700; }
+.m3-body-medium { font-size: 0.875rem; line-height: 1.25rem; }
+.m3-body-small { font-size: 0.75rem; line-height: 1rem; }
+.m3-label-large { font-family: var(--font-display); font-size: 0.875rem; line-height: 1.25rem; font-weight: 600; }
+.m3-label-small { font-family: var(--font-display); font-size: 0.6875rem; line-height: 1rem; font-weight: 600; }
+
+/* ─── Asternal Plus ──────────────────────────────────────────────────────── */
+.plus-page {
+  --primary: var(--plus);
+  --primary-foreground: var(--plus-on-primary);
+}
+.profile-plus-benefits {
+  border: 2.5px solid var(--crayon-ink-border) !important;
+  background-color: var(--plus-container) !important;
+  background-image: var(--crayon-wax-pattern) !important;
+  border-radius: var(--crayon-radius-card) !important;
+  box-shadow: var(--glass-highlight), var(--m3-elev-1) !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.profile-plus-benefits:hover {
+  border-color: var(--plus) !important;
+  box-shadow: var(--glass-highlight), var(--m3-elev-2) !important;
+}
+.profile-plus-benefits-icon {
+  background: var(--plus) !important;
+  color: var(--plus-on-primary);
+  border: 2px solid var(--crayon-ink-border);
+  box-shadow: var(--shadow-xs);
+}
+.profile-plus-benefits-chevron {
+  color: var(--plus) !important;
+}
+
+/* ─── Notificaciones y Buscador ──────────────────────────────────────────── */
+.notification-filter-control {
+  background-color: transparent;
+  border-color: transparent;
+  border-radius: var(--crayon-radius-btn);
+  color: var(--foreground);
+}
+.notification-filter-control:hover {
+  background-color: color-mix(in oklab, var(--primary) 12%, transparent);
+}
+.notification-filter-control-active {
+  background-color: color-mix(in oklab, var(--primary) 18%, transparent) !important;
+  border: 2px solid var(--crayon-ink-border) !important;
+  box-shadow: var(--shadow-xs) !important;
+}
+.notification-event-row {
+  border-color: transparent;
+  border-radius: var(--crayon-radius-input);
+}
+.notification-event-row:hover {
+  background-color: var(--m3-surface-high);
+}
+.notification-event-row-unread {
+  background-color: color-mix(in oklab, var(--primary) 12%, var(--card)) !important;
+}
+
+.search-result-row {
+  background-color: var(--glass-fill);
+  background-image: var(--crayon-wax-pattern);
+  border: 2px solid var(--crayon-ink-border);
+  border-radius: var(--crayon-radius-input);
+  box-shadow: var(--glass-highlight), var(--shadow-xs);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.search-result-row:hover {
+  background-color: var(--glass-fill-strong);
+  transform: translate(-1px, -1px);
+  box-shadow: var(--glass-highlight), var(--shadow-sm);
+}
+
+/* ─── Menú lateral y pantallas de acceso en Crayola ──────────────────────── */
+.glass-menu-drawer,
+.menu-drawer {
+  background-color: var(--popover);
+  background-image: var(--crayon-wax-pattern);
+  border-left: 3px solid var(--crayon-ink-border);
+  box-shadow: var(--glass-highlight), -4px 0px 0px 0px var(--crayon-shadow-color);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.menu-drawer .menu-section-list {
+  display: grid;
+  gap: 0.35rem;
+}
+.menu-drawer .menu-action {
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: var(--crayon-radius-btn);
+  font-family: var(--font-display);
+  transition: background-color 0.14s ease, transform 0.12s ease, border-color 0.14s ease;
+}
+.menu-drawer .menu-action:hover {
+  background: color-mix(in oklab, var(--primary) 12%, transparent);
+  border-color: var(--crayon-ink-border);
+}
+.menu-drawer .menu-action:active {
+  transform: translate(1px, 2px);
+}
+
+.auth-scene {
+  background-color: var(--canvas);
+  background-image:
+    radial-gradient(oklch(0.35 0.04 55 / 0.08) 1px, transparent 0),
+    radial-gradient(oklch(0.55 0.16 254 / 0.06) 1px, transparent 0);
+  background-size: 24px 24px, 36px 36px;
+  background-position: 0 0, 12px 12px;
+}
+.auth-orb {
+  position: absolute;
+  border-radius: var(--crayon-radius-card);
+  opacity: 0.22;
+  pointer-events: none;
+  animation: drift-slow 18s ease-in-out infinite;
+}
+.auth-orb-1 { background: oklch(0.62 0.18 254 / 0.25); }
+.auth-orb-2 { background: oklch(0.74 0.16 78 / 0.25); animation-delay: -6s; }
+.auth-orb-3 { background: oklch(0.62 0.18 150 / 0.22); animation-delay: -12s; }
+.auth-grid {
+  background-image:
+    linear-gradient(var(--color-grid) 1.5px, transparent 1.5px),
+    linear-gradient(90deg, var(--color-grid) 1.5px, transparent 1.5px);
+  background-size: 32px 32px;
+}
+.auth-card {
+  background-color: var(--glass-fill-strong);
+  background-image: var(--crayon-wax-pattern);
+  border: 3px solid var(--crayon-ink-border);
+  border-radius: var(--crayon-radius-card);
+  box-shadow: var(--glass-highlight), var(--glass-deep-shadow);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.auth-gradient-text {
+  background: var(--gradient-asternal);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ─── Editor de juegos (Studio) en Estilo Crayola ────────────────────────── */
+/* Raíz sin filtro de desenfoque para cumplir <RULE[AGENTS_md]>; los bordes y
+   texturas de crayón viven en las barras, paneles y controles individuales. */
+.editor-shell {
+  background-color: var(--canvas);
+  background-image:
+    radial-gradient(oklch(0.35 0.04 55 / 0.07) 1px, transparent 0),
+    radial-gradient(oklch(0.55 0.14 254 / 0.05) 1px, transparent 0);
+  background-size: 24px 24px, 36px 36px;
+  background-position: 0 0, 12px 12px;
+}
+
+.editor-rail,
+.editor-bar,
+.app-header {
+  background-color: var(--glass-fill-strong);
+  background-image: var(--crayon-wax-pattern);
+  border-color: var(--crayon-ink-border);
+  box-shadow: var(--glass-highlight), var(--m3-elev-1);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.editor-fab-group {
+  background-color: var(--glass-fill-strong);
+  background-image: var(--crayon-wax-pattern);
+  border: 2.5px solid var(--crayon-ink-border);
+  border-radius: var(--crayon-radius-card);
+  box-shadow: var(--glass-highlight), var(--m3-elev-2);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.editor-fab {
+  background-color: var(--glass-fill);
+  background-image: var(--crayon-wax-pattern);
+  border: 2px solid var(--crayon-ink-border);
+  border-radius: var(--crayon-radius-btn);
+  box-shadow: var(--glass-highlight), var(--shadow-xs);
+  transition: transform 0.12s ease, background-color 0.14s ease, color 0.14s ease, border-color 0.14s ease, box-shadow 0.12s ease;
+}
+.editor-fab:hover {
+  background-color: var(--m3-surface-high);
+  transform: translate(-1px, -1px);
+  box-shadow: var(--glass-highlight), var(--shadow-sm);
+}
+.editor-fab:active {
+  transform: translate(1px, 2px);
+  box-shadow: none;
+}
+

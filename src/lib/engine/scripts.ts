@@ -1,0 +1,1727 @@
+// Block-based scripting (events + actions) for Asternal Engine
+import type { Entity, EntityKind, RuntimeInput, RuntimeState, Scene, UIElement } from "./core";
+import { intersects, KIND_PRESETS, uid as makeId } from "./core";
+import { playSoundUrl, playRandomCustomSound, startMusic, stopMusic, vibrate } from "./sfx";
+
+export type EventType =
+  | "onStart"
+  | "onCreate"
+  | "onUpdate"
+  | "onCollide"
+  | "onKeyDown"
+  | "onScoreReach"
+  | "onDestroyed"
+  | "onDestroy"
+  | "onTimer"
+  | "onLeaveScreen"
+  | "onLand"
+  | "onWin"
+  | "onLose"
+  | "onMessage"
+  // Eventos de interfaz: los dispara el toque sobre un elemento de UI.
+  | "onTap"
+  | "onHold"
+  | "onRelease";
+
+/**
+ * Los tres momentos en que se puede ejecutar un script de interfaz.
+ *
+ * `tap` es el instante de apoyar el dedo (no la espera al primer movimiento),
+ * `hold` se repite en cada fotograma mientras se mantiene, y `release` llega al
+ * levantar. Para un botón, `hold` es lo que permite hacer algo "mientras está
+ * pulsado" (acelerar, cargar un salto…) sin depender de los eventos de tecla.
+ */
+export type UIScriptPhase = "tap" | "hold" | "release";
+
+/** Evento que corresponde a cada momento de ejecución. */
+export const UI_EVENT_FOR_PHASE: Record<UIScriptPhase, EventType> = {
+  tap: "onTap",
+  hold: "onHold",
+  release: "onRelease",
+};
+
+/** Eventos que solo tienen sentido en un elemento de interfaz. */
+export const UI_EVENTS: EventType[] = ["onTap", "onHold", "onRelease"];
+
+export type BlockKind =
+  // existing
+  | "jump"
+  | "setVx"
+  | "setVy"
+  | "addScore"
+  | "destroySelf"
+  | "destroyOther"
+  | "win"
+  | "lose"
+  | "teleport"
+  | "log"
+  | "playSound"
+  | "vibrate"
+  | "shake"
+  | "setColor"
+  | "setSize"
+  | "setGravity"
+  | "setControllable"
+  | "impulse"
+  | "setVisible"
+  | "restartScene"
+  | "setBg"
+  | "if"
+  // 30 new
+  | "setX"
+  | "setY"
+  | "moveX"
+  | "moveY"
+  | "flipVx"
+  | "flipVy"
+  | "bounceY"
+  | "stop"
+  | "setSpeed"
+  | "setOpacity"
+  | "setHazard"
+  | "setSolid"
+  | "setCollectible"
+  | "setGoalFlag"
+  | "addLives"
+  | "setLives"
+  | "setScore"
+  | "resetScore"
+  | "spawnEntity"
+  | "cloneSelf"
+  | "setSceneGravity"
+  | "playRandomSound"
+  | "wrapScreen"
+  | "faceTarget"
+  | "chase"
+  | "setHitbox"
+  | "clearHitbox"
+  | "removeAllOf"
+  | "comment"
+  | "hurtPlayer"
+  | "wait"
+  | "setFacing"
+  | "knockback"
+  | "pushAway"
+  | "setVariable"
+  | "changeVariable"
+  | "setProperty"
+  | "changeProperty"
+  | "broadcast"
+  | "ifVariable"
+  | "repeat"
+  | "setObjectSize"
+  | "playMusic"
+  | "stopMusic"
+  // Scratch 3.0 blocks
+  | "moveSteps"
+  | "turnRight"
+  | "turnLeft"
+  | "pointInDirection"
+  | "gotoTarget"
+  | "glideTo"
+  | "ifOnEdgeBounce"
+  | "sayForSecs"
+  | "say"
+  | "thinkForSecs"
+  | "clearBubble"
+  | "changeSizeBy"
+  | "setSizePercent"
+  | "clearGraphicEffects"
+  | "goToFrontBack"
+  | "goForwardBackwardLayers"
+  | "ifSensing"
+  | "repeatUntilVariable"
+  | "senseDistanceToVariable"
+  | "sensePropertyToVariable"
+  | "resetTimer"
+  | "mathOperation"
+  | "setRandomVariable"
+  | "mathFunctionVariable"
+  | "joinTextVariable"
+  | "showVariable"
+  | "hideVariable";
+
+export type ScriptTarget = "self" | "other" | "scene";
+export type VariableScope = "entity" | "scene";
+export type GenericProperty = "x" | "y" | "vx" | "vy" | "w" | "h" | "opacity" | "rotation" | "visible" | "solid" | "gravity" | "controllable" | "hazard" | "collectible" | "goal";
+export type VariableOperator = "eq" | "neq" | "gte" | "lte";
+export type SensingCondition = "touchingKind" | "touchingEdge" | "keyPressed" | "distanceLt";
+export type MathOperator = "add" | "sub" | "mul" | "div" | "mod";
+export type MathFunction = "abs" | "floor" | "ceil" | "round" | "sqrt" | "sin" | "cos";
+
+export interface Block {
+  id: string;
+  kind: BlockKind;
+  value?: number;
+  x?: number;
+  y?: number;
+  w?: number;
+  h?: number;
+  text?: string;
+  /** dataURL/URL del sonido personalizado (archivo del usuario). */
+  soundUrl?: string;
+  /** Nombre visible del sonido seleccionado. */
+  soundName?: string;
+  color?: string;
+  bool?: boolean;
+  cond?: "scoreGte" | "scoreLte";
+  thenBlocks?: Block[];
+  elseBlocks?: Block[];
+  target?: ScriptTarget;
+  scope?: VariableScope;
+  property?: GenericProperty;
+  operator?: VariableOperator;
+  repeat?: number;
+  sensingCond?: SensingCondition;
+  sensingKey?: "left" | "right" | "jump";
+  varA?: string;
+  varB?: string;
+  mathOp?: MathOperator;
+  mathFn?: MathFunction;
+}
+
+export interface Script {
+  id: string;
+  event: EventType;
+  withKind?: EntityKind | "any";          // onCollide
+  key?: "left" | "right" | "jump";        // onKeyDown
+  threshold?: number;                     // onScoreReach
+  interval?: number;                      // onTimer (ms)
+  message?: string;                       // onMessage
+  blocks: Block[];
+  /** Código original escrito por el usuario en su propio lenguaje de programación inventado. */
+  customLanguageCode?: string;
+  /** Nombre del lenguaje inventado por el usuario. */
+  languageName?: string;
+  /** Código JavaScript/HTML5 compilado por la IA para el motor. */
+  compiledJs?: string;
+  /** Explicación de la traducción realizada por la IA. */
+  aiExplanation?: string;
+}
+
+export const EVENT_LABELS: Record<EventType, string> = {
+  onStart: "On Start",
+  onCreate: "On Create",
+  onUpdate: "On Update",
+  onCollide: "On Collide",
+  onKeyDown: "On Key Press",
+  onScoreReach: "On Score Reach",
+  onDestroyed: "On Destroyed",
+  onDestroy: "On Destroy",
+  onTimer: "On Timer",
+  onLeaveScreen: "On Leave Screen",
+  onLand: "On Land",
+  onWin: "On Win",
+  onLose: "On Lose",
+  onMessage: "On Message",
+  onTap: "On Tap (button)",
+  onHold: "While Held (button)",
+  onRelease: "On Release (button)",
+};
+
+/**
+ * Eventos que una entidad sí puede recibir sola. El editor de eventos de una
+ * entidad ofrece solo estos: los de interfaz no llegarían nunca (los dispara un
+ * toque sobre un elemento de UI, no la escena).
+ */
+export const ENTITY_EVENTS: EventType[] = (Object.keys(EVENT_LABELS) as EventType[])
+  .filter(event => !UI_EVENTS.includes(event));
+
+export const BLOCK_LABELS: Record<BlockKind, string> = {
+  jump: "Jump (force)",
+  setVx: "Set velocity X",
+  setVy: "Set velocity Y",
+  addScore: "Add score",
+  destroySelf: "Destroy self",
+  destroyOther: "Destroy other",
+  win: "Win level",
+  lose: "Game over",
+  teleport: "Teleport (x,y)",
+  log: "Log message",
+  playSound: "Play sound",
+  vibrate: "Vibrate (ms)",
+  shake: "Screen shake",
+  setColor: "Set color",
+  setSize: "Set size",
+  setGravity: "Enable gravity",
+  setControllable: "Player control",
+  impulse: "Impulse (x,y)",
+  setVisible: "Set visible",
+  restartScene: "Restart scene",
+  setBg: "Set background",
+  if: "If condition",
+  // new
+  setX: "Set X",
+  setY: "Set Y",
+  moveX: "Move X by",
+  moveY: "Move Y by",
+  flipVx: "Flip velocity X",
+  flipVy: "Flip velocity Y",
+  bounceY: "Bounce Y (%)",
+  stop: "Stop motion",
+  setSpeed: "Set speed",
+  setOpacity: "Set opacity %",
+  setHazard: "Set hazard",
+  setSolid: "Set solid",
+  setCollectible: "Set collectible",
+  setGoalFlag: "Set goal flag",
+  addLives: "Add lives",
+  setLives: "Set lives",
+  setScore: "Set score",
+  resetScore: "Reset score",
+  spawnEntity: "Spawn entity",
+  cloneSelf: "Clone self",
+  setSceneGravity: "Set scene gravity",
+  playRandomSound: "Random sound",
+  wrapScreen: "Wrap screen",
+  faceTarget: "Face target",
+  chase: "Chase target",
+  setHitbox: "Set hitbox",
+  clearHitbox: "Clear hitbox",
+  removeAllOf: "Remove all of kind",
+  comment: "Comment",
+  hurtPlayer: "Hurt player",
+  wait: "Wait (ms)",
+  setFacing: "Set facing (-1/1)",
+  knockback: "Knockback (x,y)",
+  pushAway: "Push away from player",
+  setVariable: "Set variable",
+  changeVariable: "Change variable by",
+  setProperty: "Set property",
+  changeProperty: "Change property by",
+  broadcast: "Broadcast message",
+  ifVariable: "If variable",
+  repeat: "Repeat",
+  setObjectSize: "Set object size (target)",
+  playMusic: "Play music",
+  stopMusic: "Stop music",
+  // Scratch 3.0
+  moveSteps: "Move steps",
+  turnRight: "Turn right (deg)",
+  turnLeft: "Turn left (deg)",
+  pointInDirection: "Point in direction",
+  gotoTarget: "Go to target / random",
+  glideTo: "Glide to (x,y)",
+  ifOnEdgeBounce: "If on edge, bounce",
+  sayForSecs: "Say for (ms)",
+  say: "Say",
+  thinkForSecs: "Think for (ms)",
+  clearBubble: "Clear speech bubble",
+  changeSizeBy: "Change size by (%)",
+  setSizePercent: "Set size to (%)",
+  clearGraphicEffects: "Clear graphic effects",
+  goToFrontBack: "Go to front/back layer",
+  goForwardBackwardLayers: "Change layer Z by",
+  ifSensing: "If sensing condition",
+  repeatUntilVariable: "Repeat until variable",
+  senseDistanceToVariable: "Sense distance to variable",
+  sensePropertyToVariable: "Sense property to variable",
+  resetTimer: "Reset timer",
+  mathOperation: "Math operation",
+  setRandomVariable: "Pick random into variable",
+  mathFunctionVariable: "Math function into variable",
+  joinTextVariable: "Join text into variable",
+  showVariable: "Show variable monitor",
+  hideVariable: "Hide variable monitor",
+};
+
+export const ALL_BLOCKS: BlockKind[] = [
+  "jump", "impulse", "setVx", "setVy", "setSpeed", "stop", "flipVx", "flipVy", "bounceY",
+  "setX", "setY", "moveX", "moveY", "teleport", "wrapScreen",
+  "moveSteps", "turnRight", "turnLeft", "pointInDirection", "gotoTarget", "glideTo", "ifOnEdgeBounce",
+  "addScore", "setScore", "resetScore", "addLives", "setLives",
+  "destroySelf", "destroyOther", "cloneSelf", "spawnEntity", "removeAllOf",
+  "win", "lose", "restartScene", "hurtPlayer",
+  "playSound", "playMusic", "stopMusic", "playRandomSound", "vibrate", "shake",
+  "setColor", "setBg", "setVisible", "setOpacity", "setSize", "setObjectSize",
+  "sayForSecs", "say", "thinkForSecs", "clearBubble", "changeSizeBy", "setSizePercent", "clearGraphicEffects", "goToFrontBack", "goForwardBackwardLayers",
+  "setGravity", "setControllable", "setHazard", "setSolid", "setCollectible", "setGoalFlag",
+  "setSceneGravity", "setHitbox", "clearHitbox",
+  "faceTarget", "chase", "knockback", "setFacing", "pushAway",
+  "log", "comment", "if", "ifSensing", "wait", "setVariable", "changeVariable", "setProperty", "changeProperty", "broadcast", "ifVariable", "repeat", "repeatUntilVariable",
+  "senseDistanceToVariable", "sensePropertyToVariable", "resetTimer", "mathOperation", "setRandomVariable", "mathFunctionVariable", "joinTextVariable", "showVariable", "hideVariable",
+];
+
+export interface RuntimeHooks {
+  shake: (intensity: number, duration: number) => void;
+  restart: () => void;
+}
+
+interface ExecCtx {
+  self: Entity;
+  other?: Entity;
+  scene: Scene;
+  state: RuntimeState;
+  hooks: RuntimeHooks;
+  input?: RuntimeInput;
+  clock?: number;
+  emitMessage?: (message: string) => void;
+}
+
+export function nextVariableValue(current: number | undefined, delta: number): number {
+  return (current ?? 0) + delta;
+}
+
+function variableBag(ctx: ExecCtx, scope: VariableScope = "entity") {
+  if (scope === "scene") return (ctx.scene.variables ??= {});
+  return (ctx.self.variables ??= {});
+}
+
+function targetFor(ctx: ExecCtx, target: ScriptTarget = "self"): Entity | Scene | null {
+  if (target === "scene") return ctx.scene;
+  if (target === "other") return ctx.other ?? null;
+  return ctx.self;
+}
+
+export function applyGenericProperty(target: Entity | Scene, property: GenericProperty, value: number | boolean, mode: "set" | "change" = "set") {
+  const record = target as unknown as Record<string, unknown>;
+  if (typeof value === "boolean") { record[property] = value; return; }
+  const previous = typeof record[property] === "number" ? record[property] as number : 0;
+  const next = mode === "change" ? previous + value : value;
+  if (property === "w" || property === "h") record[property] = Math.max(1, next);
+  else if (property === "opacity") record[property] = Math.max(0, Math.min(1, next > 1 ? next / 100 : next));
+  else record[property] = next;
+}
+
+function variablePasses(current: string | number | boolean | undefined, operator: VariableOperator = "gte", expected = 0) {
+  const numberCurrent = typeof current === "number" ? current : Number(current ?? 0);
+  if (operator === "eq") return numberCurrent === expected;
+  if (operator === "neq") return numberCurrent !== expected;
+  return operator === "lte" ? numberCurrent <= expected : numberCurrent >= expected;
+}
+
+function findFirstOfKind(scene: Scene, kind: EntityKind) {
+  for (const e of scene.entities) if (e.kind === kind && e.x > -9000) return e;
+  return null;
+}
+
+function execBlock(b: Block, ctx: ExecCtx) {
+  switch (b.kind) {
+    case "jump": ctx.self.vy = -(b.value ?? 520); break;
+    case "setVx": ctx.self.vx = b.value ?? 0; break;
+    case "setVy": ctx.self.vy = b.value ?? 0; break;
+    case "impulse":
+      ctx.self.vx += b.x ?? 0;
+      ctx.self.vy += b.y ?? 0;
+      break;
+    case "addScore": ctx.state.score += b.value ?? 1; break;
+    case "destroySelf": ctx.self.x = -99999; break;
+    case "destroyOther": if (ctx.other) ctx.other.x = -99999; break;
+    case "win": ctx.state.win = true; break;
+    case "lose": ctx.state.dead = true; break;
+    case "restartScene": ctx.hooks.restart(); break;
+    case "teleport":
+      ctx.self.x = b.x ?? ctx.self.x;
+      ctx.self.y = b.y ?? ctx.self.y;
+      break;
+    case "log": console.log("[script]", b.text ?? "", ctx.self.kind); break;
+    case "playSound": playSoundUrl(b.soundUrl || b.soundName || b.text); break;
+    case "playMusic": startMusic(b.soundUrl || b.soundName || b.text); break;
+    case "stopMusic": stopMusic(); break;
+    case "vibrate": vibrate(Math.max(1, b.value ?? 50)); break;
+    case "shake": ctx.hooks.shake(Math.max(1, b.value ?? 8), 0.3); break;
+    case "setColor": if (b.color) ctx.self.color = b.color; break;
+    case "setBg": if (b.color) ctx.scene.bg = b.color; break;
+    case "setVisible": ctx.self.visible = b.bool ?? !(ctx.self.visible ?? true); break;
+    case "setSize":
+      if (b.x) ctx.self.w = Math.max(4, b.x);
+      if (b.y) ctx.self.h = Math.max(4, b.y);
+      break;
+    case "setObjectSize": {
+      // Cambia el tamaño de un objeto concreto (no solo el de este script):
+      // «self» ajusta su propia entidad, un tipo del motor busca ese objeto y
+      // `bool` decide si se aplica al primero (false) o a todos (true).
+      const w = typeof b.w === "number" && b.w > 0 ? Math.max(4, b.w) : undefined;
+      const h = typeof b.h === "number" && b.h > 0 ? Math.max(4, b.h) : undefined;
+      if (w === undefined && h === undefined) break;
+      const applySize = (target: Entity) => {
+        if (w !== undefined) target.w = w;
+        if (h !== undefined) target.h = h;
+      };
+      const kind = b.text;
+      if (!kind || kind === "self") { applySize(ctx.self); break; }
+      if (b.bool) {
+        for (const e of ctx.scene.entities) if (e.kind === kind && e.x > -9000) applySize(e);
+      } else {
+        const first = findFirstOfKind(ctx.scene, kind as EntityKind);
+        if (first) applySize(first);
+      }
+      break;
+    }
+    case "setGravity": ctx.self.gravity = b.bool ?? !ctx.self.gravity; break;
+    case "setControllable": ctx.self.controllable = b.bool ?? !ctx.self.controllable; break;
+
+    // --- new ---
+    case "setX": ctx.self.x = b.value ?? ctx.self.x; break;
+    case "setY": ctx.self.y = b.value ?? ctx.self.y; break;
+    case "moveX": ctx.self.x += b.value ?? 0; break;
+    case "moveY": ctx.self.y += b.value ?? 0; break;
+    case "flipVx": ctx.self.vx = -ctx.self.vx; break;
+    case "flipVy": ctx.self.vy = -ctx.self.vy; break;
+    case "bounceY": ctx.self.vy = -ctx.self.vy * ((b.value ?? 80) / 100); break;
+    case "stop": ctx.self.vx = 0; ctx.self.vy = 0; break;
+    case "setSpeed": {
+      const s = b.value ?? 0;
+      const dir = ctx.self.vx === 0 ? 1 : Math.sign(ctx.self.vx);
+      ctx.self.vx = s * dir;
+      break;
+    }
+    case "setOpacity": ctx.self.opacity = Math.max(0, Math.min(1, (b.value ?? 100) / 100)); break;
+    case "setHazard": ctx.self.hazard = b.bool ?? !ctx.self.hazard; break;
+    case "setSolid": ctx.self.solid = b.bool ?? !ctx.self.solid; break;
+    case "setCollectible": ctx.self.collectible = b.bool ?? !ctx.self.collectible; break;
+    case "setGoalFlag": ctx.self.goal = b.bool ?? !ctx.self.goal; break;
+    case "addLives": ctx.state.lives += b.value ?? 1; break;
+    case "setLives": ctx.state.lives = b.value ?? 1; break;
+    case "setScore": ctx.state.score = b.value ?? 0; break;
+    case "resetScore": ctx.state.score = 0; break;
+    case "spawnEntity": {
+      const k = (b.text as EntityKind) || "coin";
+      const preset = KIND_PRESETS[k];
+      if (preset) {
+        ctx.scene.entities.push({
+          ...preset,
+          id: makeId(),
+          x: b.x ?? ctx.self.x,
+          y: b.y ?? ctx.self.y,
+        });
+      }
+      break;
+    }
+    case "cloneSelf": {
+      ctx.scene.entities.push({
+        ...ctx.self,
+        id: makeId(),
+        x: ctx.self.x + (b.x ?? 20),
+        y: ctx.self.y + (b.y ?? 0),
+        scripts: [], // no script inheritance to avoid runaway
+      });
+      break;
+    }
+    case "setSceneGravity": ctx.scene.gravity = Math.max(0, b.value ?? 1400); break;
+    case "playRandomSound": playRandomCustomSound(); break;
+    case "wrapScreen": {
+      const e = ctx.self;
+      if (e.x + e.w < 0) e.x = ctx.scene.width;
+      else if (e.x > ctx.scene.width) e.x = -e.w;
+      if (e.y + e.h < 0) e.y = ctx.scene.height;
+      else if (e.y > ctx.scene.height) e.y = -e.h;
+      break;
+    }
+    case "faceTarget": {
+      const t = findFirstOfKind(ctx.scene, (b.text as EntityKind) || "player");
+      if (t) ctx.self.vx = Math.sign(t.x - ctx.self.x) * Math.abs(ctx.self.vx || 60);
+      break;
+    }
+    case "chase": {
+      const t = findFirstOfKind(ctx.scene, (b.text as EntityKind) || "player");
+      if (t) {
+        const sp = b.value ?? 80;
+        ctx.self.vx = Math.sign(t.x - ctx.self.x) * sp;
+      }
+      break;
+    }
+    case "setHitbox":
+      ctx.self.hitbox = { x: b.x ?? 0, y: b.y ?? 0, w: Math.max(1, b.w ?? ctx.self.w), h: Math.max(1, b.h ?? ctx.self.h) };
+      break;
+    case "clearHitbox": ctx.self.hitbox = null; break;
+    case "removeAllOf": {
+      const k = (b.text as EntityKind) || "coin";
+      for (const e of ctx.scene.entities) if (e.kind === k) e.x = -99999;
+      break;
+    }
+    case "comment": break;
+    case "hurtPlayer": ctx.state.dead = true; break;
+    // `wait`, `if`, `ifVariable` y `repeat` los resuelve el intérprete de marcos
+    // (ver execFrames): necesitan controlar qué bloque se ejecuta después.
+    case "setFacing": {
+      const f = (b.value ?? 1) >= 0 ? 1 : -1;
+      ctx.self.facing = f;
+      ctx.self.flipX = f === -1;
+      break;
+    }
+    case "knockback": {
+      const target = ctx.other ?? ctx.self;
+      target.vx = b.x ?? 240;
+      target.vy = b.y ?? -320;
+      break;
+    }
+    case "pushAway": {
+      const p = findFirstOfKind(ctx.scene, "player");
+      if (p) {
+        const force = b.value ?? 280;
+        const dir = ctx.self.x < p.x ? -1 : 1;
+        ctx.self.vx = dir * force;
+        ctx.self.vy = -180;
+      }
+      break;
+    }
+    case "setVariable": {
+      variableBag(ctx, b.scope)[b.text?.trim() || "variable"] = b.value ?? 0;
+      break;
+    }
+    case "changeVariable": {
+      const bag = variableBag(ctx, b.scope);
+      const key = b.text?.trim() || "variable";
+      bag[key] = nextVariableValue(typeof bag[key] === "number" ? bag[key] : undefined, b.value ?? 1);
+      break;
+    }
+    case "setProperty":
+    case "changeProperty": {
+      const target = targetFor(ctx, b.target);
+      if (target && b.property) applyGenericProperty(target, b.property, b.bool ?? b.value ?? 0, b.kind === "changeProperty" ? "change" : "set");
+      break;
+    }
+    case "broadcast": ctx.emitMessage?.(b.text?.trim() || "message"); break;
+    case "moveSteps": {
+      const steps = b.value ?? 10;
+      const dir = ctx.self.facing === -1 ? -1 : 1;
+      ctx.self.x += steps * dir;
+      break;
+    }
+    case "turnRight": {
+      const degR = b.value ?? 15;
+      ctx.self.rotation = (((ctx.self.rotation || 0) + degR) % 360 + 360) % 360;
+      break;
+    }
+    case "turnLeft": {
+      const degL = b.value ?? 15;
+      ctx.self.rotation = (((ctx.self.rotation || 0) - degL) % 360 + 360) % 360;
+      break;
+    }
+    case "pointInDirection": {
+      const degP = b.value ?? 90;
+      ctx.self.rotation = (((degP - 90) % 360) + 360) % 360;
+      const fDir: 1 | -1 = degP < 0 || (degP > 180 && degP < 360) ? -1 : 1;
+      ctx.self.facing = fDir;
+      ctx.self.flipX = fDir === -1;
+      break;
+    }
+    case "gotoTarget": {
+      const dest = (b.text || "player").trim();
+      if (dest === "random") {
+        ctx.self.x = Math.round(Math.random() * Math.max(40, ctx.scene.width - ctx.self.w));
+        ctx.self.y = Math.round(Math.random() * Math.max(40, ctx.scene.height - ctx.self.h - 80));
+      } else {
+        const gTgt = findFirstOfKind(ctx.scene, dest as EntityKind);
+        if (gTgt) { ctx.self.x = gTgt.x; ctx.self.y = gTgt.y; }
+      }
+      break;
+    }
+    case "glideTo": {
+      const tx = b.x ?? ctx.self.x;
+      const ty = b.y ?? ctx.self.y;
+      const durSec = Math.max(0.05, (b.value ?? 500) / 1000);
+      ctx.self.vx = (tx - ctx.self.x) / durSec;
+      ctx.self.vy = (ty - ctx.self.y) / durSec;
+      break;
+    }
+    case "ifOnEdgeBounce": {
+      const eb = ctx.self;
+      if (eb.x <= 0) { eb.x = 0; eb.vx = Math.abs(eb.vx || 120); eb.facing = 1; eb.flipX = false; }
+      else if (eb.x + eb.w >= ctx.scene.width) { eb.x = Math.max(0, ctx.scene.width - eb.w); eb.vx = -Math.abs(eb.vx || 120); eb.facing = -1; eb.flipX = true; }
+      if (eb.y <= 0) { eb.y = 0; eb.vy = Math.abs(eb.vy || 120); }
+      else if (eb.y + eb.h >= ctx.scene.height) { eb.y = Math.max(0, ctx.scene.height - eb.h); eb.vy = -Math.abs(eb.vy || 120); }
+      break;
+    }
+    case "sayForSecs":
+    case "thinkForSecs": {
+      const bDur = Math.max(0.1, (b.value ?? 2000) / 1000);
+      ctx.self._bubbleText = String(b.text ?? "¡Hola!");
+      ctx.self._bubbleKind = b.kind === "thinkForSecs" ? "think" : "say";
+      ctx.self._bubbleUntil = (ctx.clock || 0) + bDur;
+      break;
+    }
+    case "say": {
+      ctx.self._bubbleText = String(b.text ?? "¡Hola!");
+      ctx.self._bubbleKind = "say";
+      ctx.self._bubbleUntil = 0;
+      break;
+    }
+    case "clearBubble": {
+      ctx.self._bubbleText = null;
+      ctx.self._bubbleUntil = 0;
+      break;
+    }
+    case "changeSizeBy": {
+      const dPct = b.value ?? 10;
+      const sFactor = Math.max(0.1, 1 + dPct / 100);
+      ctx.self.w = Math.max(4, Math.round(ctx.self.w * sFactor));
+      ctx.self.h = Math.max(4, Math.round(ctx.self.h * sFactor));
+      break;
+    }
+    case "setSizePercent": {
+      if (!ctx.self._baseW) ctx.self._baseW = ctx.self.w;
+      if (!ctx.self._baseH) ctx.self._baseH = ctx.self.h;
+      const sPct = Math.max(10, Math.min(500, b.value ?? 100));
+      ctx.self.w = Math.max(4, Math.round(ctx.self._baseW * (sPct / 100)));
+      ctx.self.h = Math.max(4, Math.round(ctx.self._baseH * (sPct / 100)));
+      break;
+    }
+    case "clearGraphicEffects": {
+      ctx.self.opacity = 1;
+      ctx.self.rotation = 0;
+      ctx.self._bubbleText = null;
+      break;
+    }
+    case "goToFrontBack": {
+      ctx.self.z = b.text === "back" ? -10 : 10;
+      break;
+    }
+    case "goForwardBackwardLayers": {
+      ctx.self.z = Math.max(-20, Math.min(20, (ctx.self.z || 0) + (b.value ?? 1)));
+      break;
+    }
+    case "senseDistanceToVariable": {
+      const sTgt = findFirstOfKind(ctx.scene, (b.varA as EntityKind) || "player");
+      const sKey = b.text?.trim() || "distancia";
+      if (sTgt) {
+        const sDx = (sTgt.x + sTgt.w / 2) - (ctx.self.x + ctx.self.w / 2);
+        const sDy = (sTgt.y + sTgt.h / 2) - (ctx.self.y + ctx.self.h / 2);
+        variableBag(ctx, b.scope || "scene")[sKey] = Math.round(Math.hypot(sDx, sDy));
+      } else {
+        variableBag(ctx, b.scope || "scene")[sKey] = 9999;
+      }
+      break;
+    }
+    case "sensePropertyToVariable": {
+      const spKey = b.text?.trim() || "sensor";
+      const spProp = b.varB || b.property || "x";
+      const spWho = b.varA || "player";
+      const spBag = variableBag(ctx, b.scope || "scene");
+      if (spProp === "score") spBag[spKey] = ctx.state.score;
+      else if (spProp === "lives") spBag[spKey] = ctx.state.lives;
+      else if (spProp === "time") spBag[spKey] = Math.round(ctx.state.time * 10) / 10;
+      else {
+        const spEnt = spWho === "self" ? ctx.self : findFirstOfKind(ctx.scene, spWho as EntityKind);
+        const rec = spEnt as unknown as Record<string, unknown> | null;
+        if (rec && rec[spProp] !== undefined) {
+          const spVal = rec[spProp];
+          spBag[spKey] = typeof spVal === "number" ? Math.round(spVal) : String(spVal || 0);
+        }
+      }
+      break;
+    }
+    case "resetTimer": {
+      ctx.state.time = 0;
+      break;
+    }
+    case "mathOperation": {
+      const mBag = variableBag(ctx, b.scope || "scene");
+      const mKey = b.text?.trim() || "resultado";
+      const readOp = (vName: string | undefined, fb: number): number => {
+        if (vName && String(vName).trim()) {
+          const rawStr = String(vName).trim();
+          const tr = rawStr.replace(/^\$/, "");
+          const numL = Number(tr);
+          if (rawStr.charAt(0) !== "$" && Number.isFinite(numL)) return numL;
+          if (ctx.scene.variables && ctx.scene.variables[tr] !== undefined) return Number(ctx.scene.variables[tr]) || 0;
+          if (ctx.self.variables && ctx.self.variables[tr] !== undefined) return Number(ctx.self.variables[tr]) || 0;
+          if (Number.isFinite(numL)) return numL;
+        }
+        return fb;
+      };
+      const opA = readOp(b.varA, b.x ?? 0);
+      const opB = readOp(b.varB, b.y ?? b.value ?? 1);
+      const mOp = b.mathOp || "add";
+      let mRes = 0;
+      if (mOp === "add") mRes = opA + opB;
+      else if (mOp === "sub") mRes = opA - opB;
+      else if (mOp === "mul") mRes = opA * opB;
+      else if (mOp === "div") mRes = opB !== 0 ? Math.round((opA / opB) * 100) / 100 : 0;
+      else if (mOp === "mod") mRes = opB !== 0 ? opA % opB : 0;
+      mBag[mKey] = mRes;
+      break;
+    }
+    case "setRandomVariable": {
+      const rBag = variableBag(ctx, b.scope || "scene");
+      const rKey = b.text?.trim() || "azar";
+      const rMin = Math.ceil(Math.min(b.x ?? 1, b.y ?? 10));
+      const rMax = Math.floor(Math.max(b.x ?? 1, b.y ?? 10));
+      rBag[rKey] = Math.floor(Math.random() * (rMax - rMin + 1)) + rMin;
+      break;
+    }
+    case "mathFunctionVariable": {
+      const fBag = variableBag(ctx, b.scope || "scene");
+      const fKey = b.text?.trim() || "resultado";
+      let fIn = b.value ?? 0;
+      if (b.varA && String(b.varA).trim()) {
+        const vn = String(b.varA).trim().replace(/^\$/, "");
+        const numLit = Number(vn);
+        const rv = (ctx.scene.variables && ctx.scene.variables[vn] !== undefined)
+          ? ctx.scene.variables[vn]
+          : (ctx.self.variables ? ctx.self.variables[vn] : undefined);
+        if (rv !== undefined) fIn = Number(rv) || 0;
+        else if (Number.isFinite(numLit)) fIn = numLit;
+      }
+      const fn = b.mathFn || "abs";
+      let fOut = fIn;
+      if (fn === "abs") fOut = Math.abs(fIn);
+      else if (fn === "floor") fOut = Math.floor(fIn);
+      else if (fn === "ceil") fOut = Math.ceil(fIn);
+      else if (fn === "round") fOut = Math.round(fIn);
+      else if (fn === "sqrt") fOut = Math.round(Math.sqrt(Math.max(0, fIn)) * 100) / 100;
+      else if (fn === "sin") fOut = Math.round(Math.sin((fIn * Math.PI) / 180) * 100) / 100;
+      else if (fn === "cos") fOut = Math.round(Math.cos((fIn * Math.PI) / 180) * 100) / 100;
+      fBag[fKey] = fOut;
+      break;
+    }
+    case "joinTextVariable": {
+      const jBag = variableBag(ctx, b.scope || "scene");
+      const jKey = b.text?.trim() || "texto";
+      const resolveJoinPart = (part: string | undefined): string => {
+        if (!part) return "";
+        const s = String(part);
+        if (s.charAt(0) === "$" && s.length > 1) {
+          const vName = s.slice(1).trim();
+          const vVal = (ctx.scene.variables && ctx.scene.variables[vName] !== undefined)
+            ? ctx.scene.variables[vName]
+            : (ctx.self.variables ? ctx.self.variables[vName] : undefined);
+          if (vVal !== undefined) return String(vVal);
+        }
+        return s;
+      };
+      jBag[jKey] = resolveJoinPart(b.varA) + resolveJoinPart(b.varB);
+      break;
+    }
+    case "showVariable":
+    case "hideVariable": {
+      const vKey = b.text?.trim() || "variable";
+      const vVis = b.kind === "showVariable";
+      ctx.scene.variableDefinitions ??= [];
+      const vFound = ctx.scene.variableDefinitions.find(v => v.name === vKey);
+      if (vFound) vFound.visibleOnStage = vVis;
+      else {
+        ctx.scene.variableDefinitions.push({
+          id: makeId(),
+          name: vKey,
+          scope: b.scope || "scene",
+          entityId: b.scope === "entity" ? ctx.self.id : undefined,
+          initialValue: 0,
+          visibleOnStage: vVis,
+        });
+      }
+      break;
+    }
+    default: {
+      if (typeof window !== "undefined") {
+        const rt = (window as unknown as { AsternalRuntime?: { customBlocks?: Record<string, (block: Block, ctx: ExecCtx, api: unknown) => void>; api?: unknown } }).AsternalRuntime;
+        const customFn = rt?.customBlocks?.[b.kind];
+        if (typeof customFn === "function") {
+          try {
+            customFn(b, ctx, rt?.api);
+          } catch {
+            // No abortar los bloques siguientes si falla un bloque personalizado
+          }
+        }
+      }
+      break;
+    }
+  }
+}
+
+/**
+ * Marco de ejecución. Cada marco recorre una lista de bloques; los contenedores
+ * (`si`, `si no`, `repetir`) apilan un marco hijo, así que un `esperar` puede
+ * suspender la ejecución a cualquier profundidad y reanudarla después sin
+ * perder el punto exacto ni afectar a los demás bloques del script.
+ */
+interface ExecFrame {
+  blocks: Block[];
+  index: number;
+  repeatLeft: number;
+}
+
+/** Script detenido en un `esperar`, a la espera del instante `until`. */
+interface SuspendedScript {
+  stack: ExecFrame[];
+  until: number;
+  entityId: string;
+  otherId?: string;
+}
+
+/** Campos numéricos de un bloque que deben llegar como número usable. */
+const NUMERIC_FIELDS = ["value", "x", "y", "w", "h", "repeat"] as const;
+
+/**
+ * Normaliza un bloque sin tocar el guardado: un script importado o generado
+ * por IA puede traer el número como texto (`"120"`) o como basura (`"abc"`).
+ * Un texto numérico se convierte y un valor inválido se descarta, para que el
+ * bloque use su valor por defecto en lugar de romper la escena.
+ */
+function sanitizeBlock(block: Block): Block {
+  let copy: Block | null = null;
+  for (const field of NUMERIC_FIELDS) {
+    const raw: unknown = block[field];
+    if (raw === undefined) continue;
+    if (typeof raw === "number" && Number.isFinite(raw)) continue;
+    const parsed = typeof raw === "string" ? Number(raw.trim()) : NaN;
+    copy ??= { ...block };
+    if (Number.isFinite(parsed)) copy[field] = parsed;
+    else delete copy[field];
+  }
+  return copy ?? block;
+}
+
+/**
+ * Lista de bloques a prueba de datos incompletos: un script importado o
+ * generado por IA puede llegar sin `blocks`, con entradas nulas, con números
+ * como texto o con un `thenBlocks` que no es una lista. Nunca debe lanzar.
+ */
+function blockList(blocks: unknown): Block[] {
+  if (!Array.isArray(blocks)) return [];
+  return blocks
+    .filter((b): b is Block => !!b && typeof b === "object" && typeof (b as Block).kind === "string")
+    .map(sanitizeBlock);
+}
+
+/** Número usable a partir de lo que llega (número, texto numérico o basura). */
+function finiteNumber(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value.trim());
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return undefined;
+}
+
+/**
+ * Bloque a prueba de datos de la IA o de una importación: descarta lo que no
+ * es un bloque real del motor, conserva su `id` (o crea uno) y normaliza
+ * también los bloques anidados de `if` / `ifVariable` / `repeat`.
+ *
+ * Que cada bloque —incluidos los de dentro— tenga identidad propia es lo que
+ * permite editarlos y eliminarlos por separado en el editor de eventos.
+ */
+export function normalizeBlock(block: Block): Block | null {
+  if (!block || typeof block !== "object") return null;
+  if (typeof block.kind !== "string" || !(block.kind in BLOCK_LABELS)) return null;
+  const clean = sanitizeBlock(block);
+  const next: Block = { ...clean, id: typeof clean.id === "string" && clean.id ? clean.id : uid() };
+  if (Array.isArray(clean.thenBlocks)) next.thenBlocks = clean.thenBlocks.flatMap(normalizedList);
+  if (Array.isArray(clean.elseBlocks)) next.elseBlocks = clean.elseBlocks.flatMap(normalizedList);
+  return next;
+}
+
+function normalizedList(block: Block): Block[] {
+  const normalized = normalizeBlock(block);
+  return normalized ? [normalized] : [];
+}
+
+/**
+ * Script a prueba de datos de la IA o de una importación.
+ *
+ * Devuelve `null` si no hay evento real: así una respuesta inventada no ensucia
+ * la lista de scripts. `fallbackId` conserva la identidad al **seguir editando
+ * un script con IA**, de modo que el resultado siga siendo el mismo script (con
+ * su contexto y sus cambios previos) en lugar de uno nuevo.
+ */
+export function normalizeScript(raw: unknown, fallbackId?: string): Script | null {
+  if (!raw || typeof raw !== "object") return null;
+  const source = raw as Partial<Script> & { customRuntimeJs?: string; jsCode?: string; explanation?: string };
+  const rawJs =
+    typeof source.compiledJs === "string" && source.compiledJs.trim()
+      ? source.compiledJs.trim()
+      : typeof source.customRuntimeJs === "string" && source.customRuntimeJs.trim()
+        ? source.customRuntimeJs.trim()
+        : typeof source.jsCode === "string" && source.jsCode.trim()
+          ? source.jsCode.trim()
+          : undefined;
+  const event = typeof source.event === "string" && source.event in EVENT_LABELS
+    ? (source.event as EventType)
+    : rawJs && source.event === undefined
+      ? "onStart"
+      : null;
+  if (!event) return null;
+
+  const script: Script = {
+    ...(source as Script),
+    id: typeof source.id === "string" && source.id ? source.id : fallbackId || uid(),
+    event,
+    blocks: blockList(source.blocks).flatMap(normalizedList),
+    ...(rawJs ? { compiledJs: rawJs } : {}),
+    ...(typeof source.aiExplanation === "string" && source.aiExplanation.trim()
+      ? { aiExplanation: source.aiExplanation.trim() }
+      : typeof source.explanation === "string" && source.explanation.trim()
+        ? { aiExplanation: source.explanation.trim() }
+        : {}),
+  };
+
+  // Los números de cabecera también pueden llegar como texto desde la IA.
+  for (const field of ["threshold", "interval"] as const) {
+    const value = finiteNumber(source[field]);
+    if (value === undefined) delete script[field];
+    else script[field] = value;
+  }
+  return script;
+}
+
+/** Resultado de seguir editando un script existente con IA. */
+export interface ScriptEditResult {
+  /** El script original con su cabecera intacta y los bloques que devolvió la IA. */
+  script: Script;
+  /** Evento que propuso la IA si intentó cambiarlo (la cabecera no se toca). */
+  suggestedEvent: EventType | null;
+}
+
+/**
+ * Aplica la respuesta de la IA al script que se estaba editando.
+ *
+ * La cabecera del script —evento y sus parámetros (`withKind`, `key`,
+ * `threshold`, `interval`, `message`)— se conserva tal cual: la IA solo aporta
+ * los bloques. Así el resultado sigue siendo el mismo script, sin perder el
+ * contexto ni los cambios previos, y el evento no cambia a espaldas del
+ * usuario. Si la IA propuso otro evento, se devuelve en `suggestedEvent` para
+ * avisarlo en el editor. Devuelve `null` si la respuesta no es usable.
+ */
+export function applyScriptEdit(original: Script, edited: unknown): ScriptEditResult | null {
+  const next = normalizeScript(edited, original.id);
+  if (!next) return null;
+  const merged: Script = {
+    ...original,
+    id: original.id,
+    blocks: next.blocks,
+    ...(next.compiledJs ? { compiledJs: next.compiledJs } : {}),
+    ...(next.aiExplanation ? { aiExplanation: next.aiExplanation } : {}),
+  };
+  return {
+    script: merged,
+    suggestedEvent: next.event === original.event ? null : next.event,
+  };
+}
+
+/** Lista de scripts normalizados: acepta un array, un objeto Script único o un envoltorio `{ scripts }` / `{ script }`. */
+export function normalizeScripts(raw: unknown): Script[] {
+  const obj = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : null;
+  const topJs =
+    typeof obj?.customRuntimeJs === "string" && obj.customRuntimeJs.trim()
+      ? obj.customRuntimeJs.trim()
+      : typeof obj?.compiledJs === "string" && obj.compiledJs.trim()
+        ? obj.compiledJs.trim()
+        : typeof obj?.jsCode === "string" && obj.jsCode.trim()
+          ? obj.jsCode.trim()
+          : undefined;
+  const list = Array.isArray(raw)
+    ? raw
+    : Array.isArray(obj?.scripts)
+      ? (obj.scripts as unknown[])
+      : obj?.script
+        ? [obj.script]
+        : obj && (typeof obj.event === "string" || topJs)
+          ? [obj]
+          : null;
+  if (!Array.isArray(list)) return [];
+  const normalized = list.flatMap(item => {
+    const script = normalizeScript(item);
+    return script ? [script] : [];
+  });
+  if (topJs && normalized.length > 0 && !normalized.some(s => s.compiledJs)) {
+    normalized[0] = { ...normalized[0], compiledJs: topJs };
+  }
+  return normalized;
+}
+
+function ifConditionPasses(b: Block, ctx: ExecCtx) {
+  const v = b.value ?? 0;
+  if (b.cond === "scoreGte") return ctx.state.score >= v;
+  if (b.cond === "scoreLte") return ctx.state.score <= v;
+  return false;
+}
+
+function sensingConditionPasses(b: Block, ctx: ExecCtx): boolean {
+  const cond = b.sensingCond || "touchingKind";
+  if (cond === "touchingKind") {
+    const kind = b.text || "player";
+    for (const other of ctx.scene.entities) {
+      if (other.id === ctx.self.id || other.x < -9000) continue;
+      if (kind !== "any" && other.kind !== kind) continue;
+      if (intersects(ctx.self, other)) return true;
+    }
+    return false;
+  }
+  if (cond === "touchingEdge") {
+    const e = ctx.self;
+    return e.x <= 2 || e.x + e.w >= ctx.scene.width - 2 || e.y <= 2 || e.y + e.h >= ctx.scene.height - 2;
+  }
+  if (cond === "keyPressed") {
+    const k = b.sensingKey || "jump";
+    return !!(ctx.input && ctx.input[k]);
+  }
+  if (cond === "distanceLt") {
+    const tgt = findFirstOfKind(ctx.scene, (b.text as EntityKind) || "player");
+    if (!tgt) return false;
+    const dx = (tgt.x + tgt.w / 2) - (ctx.self.x + ctx.self.w / 2);
+    const dy = (tgt.y + tgt.h / 2) - (ctx.self.y + ctx.self.h / 2);
+    return Math.hypot(dx, dy) <= (b.value ?? 120);
+  }
+  return false;
+}
+
+/** Milisegundos de un bloque `esperar` (0 si falta o no es un número válido). */
+function waitSeconds(b: Block) {
+  const ms = typeof b.value === "number" && Number.isFinite(b.value) ? b.value : 0;
+  return Math.max(0, ms) / 1000;
+}
+
+/**
+ * Ejecuta la pila hasta agotarla. Devuelve el control cuando alcanza un
+ * `esperar` con duración positiva: entonces guarda la pila con `suspend`.
+ */
+function execFrames(stack: ExecFrame[], ctx: ExecCtx, now: number, suspend: (stack: ExecFrame[], until: number) => void) {
+  while (stack.length) {
+    const frame = stack[stack.length - 1];
+    if (frame.index >= frame.blocks.length) {
+      stack.pop();
+      if (frame.repeatLeft > 1) {
+        frame.repeatLeft -= 1;
+        frame.index = 0;
+        stack.push(frame);
+      }
+      continue;
+    }
+
+    const block = frame.blocks[frame.index];
+    frame.index += 1;
+
+    if (block.kind === "wait") {
+      const seconds = waitSeconds(block);
+      if (seconds > 0) {
+        suspend(stack, now + seconds);
+        return;
+      }
+      continue;
+    }
+
+    if (block.kind === "if") {
+      const branch = ifConditionPasses(block, ctx) ? block.thenBlocks : block.elseBlocks;
+      if (branch && branch.length) stack.push({ blocks: blockList(branch), index: 0, repeatLeft: 1 });
+      continue;
+    }
+
+    if (block.kind === "ifSensing") {
+      const branch = sensingConditionPasses(block, ctx) ? block.thenBlocks : block.elseBlocks;
+      if (branch && branch.length) stack.push({ blocks: blockList(branch), index: 0, repeatLeft: 1 });
+      continue;
+    }
+
+    if (block.kind === "ifVariable") {
+      const current = variableBag(ctx, block.scope)[block.text?.trim() || "variable"];
+      const branch = variablePasses(current, block.operator, block.value ?? 0) ? block.thenBlocks : block.elseBlocks;
+      stack.push({ blocks: blockList(branch), index: 0, repeatLeft: 1 });
+      continue;
+    }
+
+    if (block.kind === "repeat") {
+      const amount = Math.min(100, Math.max(0, Math.floor(block.repeat ?? block.value ?? 1)));
+      if (amount > 0) stack.push({ blocks: blockList(block.thenBlocks), index: 0, repeatLeft: amount });
+      continue;
+    }
+
+    if (block.kind === "repeatUntilVariable") {
+      const current = variableBag(ctx, block.scope)[block.text?.trim() || "variable"];
+      if (!variablePasses(current, block.operator, block.value ?? 0)) {
+        const inner = blockList(block.thenBlocks);
+        if (inner.length) stack.push({ blocks: inner, index: 0, repeatLeft: 1 });
+      }
+      continue;
+    }
+
+    execBlock(block, ctx);
+  }
+}
+
+export interface ScriptRunner {
+  step: (scene: Scene, state: RuntimeState, input: RuntimeInput, hooks: RuntimeHooks, dt: number) => void;
+  /**
+   * Ejecuta los scripts de un elemento de interfaz en el momento indicado
+   * (`tap` al pulsar, `hold` mientras se mantiene, `release` al soltar).
+   *
+   * Dentro del script, `self` es el propio elemento: los bloques que cambian
+   * tamaño, posición, opacidad, visibilidad o color actúan sobre él, y los de
+   * puntuación, vidas, escena, sonido o mensajes siguen actuando sobre la
+   * partida. Los mensajes que emita (`broadcast`) los reciben en el mismo
+   * fotograma los scripts `onMessage` de la escena.
+   */
+  runUI: (element: UIElement, phase: UIScriptPhase) => void;
+}
+
+export function createScriptRunner(): ScriptRunner {
+  const started = new Set<string>();
+  const destroyed = new Set<string>();
+  const left = new Set<string>();
+  const colliding = new Set<string>();
+  const prevVy = new Map<string, number>();
+  const timerAcc = new Map<string, number>();
+  /** Scripts detenidos en un `esperar`, por entidad y script. */
+  const suspended = new Map<string, SuspendedScript>();
+  /** Lo mismo para los scripts de interfaz: por elemento y script. */
+  const uiSuspended = new Map<string, { stack: ExecFrame[]; until: number; elementId: string }>();
+  /** Mensajes emitidos por un script de interfaz, que se reparten en el paso siguiente. */
+  const uiMessages = new Set<string>();
+  /** Lo último que vio el motor: los scripts de UI lo necesitan fuera del paso. */
+  let last: { scene: Scene; state: RuntimeState; hooks: RuntimeHooks } | null = null;
+  /** Identidad estable por objeto de script: dos scripts con el mismo id no se mezclan. */
+  const execKeys = new WeakMap<Script, string>();
+  let execKeySeq = 0;
+  let clock = 0;
+  let prevInput: RuntimeInput = { left: false, right: false, jump: false };
+  let prevScore = 0;
+  let prevWin = false;
+  let prevDead = false;
+
+  return {
+    runUI(element, phase) {
+      if (!last) return;
+      const want = UI_EVENT_FOR_PHASE[phase];
+      const scripts = (element.scripts ?? []).filter(s => s.event === want);
+      if (!scripts.length) return;
+      const ctx: ExecCtx = {
+        // El elemento hace de `self`: así los bloques de interfaz (tamaño,
+        // posición, opacidad, visibilidad, color) lo cambian a él.
+        self: element as unknown as Entity,
+        scene: last.scene,
+        state: last.state,
+        hooks: last.hooks,
+        clock,
+        emitMessage: (message: string) => uiMessages.add(message),
+      };
+      for (const script of scripts) {
+        const key = `${element.id}|${script.id}`;
+        // Un script que ya está esperando no se reinicia: se reanuda él solo.
+        if (uiSuspended.has(key)) continue;
+        execFrames(
+          [{ blocks: blockList(script.blocks), index: 0, repeatLeft: 1 }],
+          ctx,
+          clock,
+          (stack, until) => uiSuspended.set(key, { stack, until, elementId: element.id }),
+        );
+      }
+    },
+
+    step(scene, state, input, hooks, dt) {
+      clock += dt;
+      last = { scene, state, hooks };
+      const messages = new Set<string>(uiMessages);
+      uiMessages.clear();
+      const keyFor = (script: Script, self: Entity) => {
+        let base = execKeys.get(script);
+        if (!base) { base = `k${++execKeySeq}`; execKeys.set(script, base); }
+        return `${self.id}|${base}`;
+      };
+      // Mientras un script espera, su evento no lo reinicia: se reanuda donde
+      // se quedó (ver el paso de reanudación), nunca desde el principio.
+      const run = (script: Script, self: Entity, other?: Entity) => {
+        if (script.compiledJs && script.compiledJs.trim()) return;
+        const key = keyFor(script, self);
+        if (suspended.has(key)) return;
+        const ctx: ExecCtx = { self, other, scene, state, hooks, input, clock, emitMessage: (message: string) => messages.add(message) };
+        execFrames(
+          [{ blocks: blockList(script.blocks), index: 0, repeatLeft: 1 }],
+          ctx,
+          clock,
+          (stack, until) => suspended.set(key, { stack, until, entityId: self.id, otherId: other?.id }),
+        );
+      };
+      const live = scene.entities;
+      const keyEdges = {
+        left: input.left && !prevInput.left,
+        right: input.right && !prevInput.right,
+        jump: input.jump && !prevInput.jump,
+      };
+
+      const winEdge = state.win && !prevWin;
+      const loseEdge = state.dead && !prevDead;
+
+      for (let i = 0; i < live.length; i++) {
+        const e = live[i];
+        const scripts = e.scripts ?? [];
+        if (!scripts.length) { prevVy.set(e.id, e.vy); continue; }
+
+        if (e.x < -9000 && !destroyed.has(e.id)) {
+          destroyed.add(e.id);
+          for (const s of scripts) {
+            suspended.delete(keyFor(s, e));
+            if (s.event === "onDestroyed" || s.event === "onDestroy") run(s, e);
+          }
+        }
+        if (e.x < -9000) continue;
+
+        const outside = e.x + e.w < 0 || e.x > scene.width || e.y > scene.height + 200 || e.y + e.h < -200;
+        if (outside && !left.has(e.id)) {
+          left.add(e.id);
+          for (const s of scripts) if (s.event === "onLeaveScreen")
+            run(s, e);
+        } else if (!outside) {
+          left.delete(e.id);
+        }
+
+        if (!started.has(e.id)) {
+          for (const s of scripts) if (s.event === "onStart" || s.event === "onCreate")
+            run(s, e);
+          started.add(e.id);
+        }
+
+        const pv = prevVy.get(e.id) ?? 0;
+        const landed = pv > 80 && e.vy === 0;
+
+        for (const s of scripts) {
+          if (s.event === "onUpdate") {
+            run(s, e);
+          } else if (s.event === "onKeyDown" && s.key && keyEdges[s.key]) {
+            run(s, e);
+          } else if (s.event === "onScoreReach") {
+            const t = s.threshold ?? 0;
+            if (prevScore < t && state.score >= t)
+              run(s, e);
+          } else if (s.event === "onTimer") {
+            // El resto se arrastra al siguiente ciclo y el margen de error evita
+            // que el redondeo en coma flotante retrase (o se coma) un pulso.
+            const iv = Math.max(0.05, (s.interval ?? 1000) / 1000);
+            const acc = (timerAcc.get(s.id) ?? 0) + dt;
+            if (acc + 1e-6 >= iv) { timerAcc.set(s.id, acc - iv); run(s, e); }
+            else timerAcc.set(s.id, acc);
+          } else if (s.event === "onLand" && landed) {
+            run(s, e);
+          } else if (s.event === "onWin" && winEdge) {
+            run(s, e);
+          } else if (s.event === "onLose" && loseEdge) {
+            run(s, e);
+          }
+        }
+
+        prevVy.set(e.id, e.vy);
+      }
+
+      // onCollide (edge-triggered)
+      const now = new Set<string>();
+      for (let i = 0; i < live.length; i++) {
+        const a = live[i];
+        if (a.x < -9000) continue;
+        const aScripts = (a.scripts ?? []).filter(s => s.event === "onCollide");
+        if (!aScripts.length) continue;
+        for (let j = 0; j < live.length; j++) {
+          if (i === j) continue;
+          const b = live[j];
+          if (b.x < -9000) continue;
+          if (!intersects(a, b)) continue;
+          const key = `${a.id}|${b.id}`;
+          now.add(key);
+          if (colliding.has(key)) continue;
+          for (const s of aScripts) {
+            if (!s.withKind || s.withKind === "any" || s.withKind === b.kind) {
+              run(s, a, b);
+            }
+          }
+        }
+      }
+      colliding.clear();
+      now.forEach(k => colliding.add(k));
+
+      // Los `esperar` vencidos se reanudan aunque su evento solo haya ocurrido
+      // una vez (onStart, onCreate…), y antes de repartir los mensajes emitidos.
+      if (suspended.size) {
+        for (const [key, paused] of Array.from(suspended)) {
+          if (clock < paused.until) continue;
+          const self = live.find(e => e.id === paused.entityId);
+          if (!self || self.x < -9000) { suspended.delete(key); continue; }
+          const other = paused.otherId ? live.find(e => e.id === paused.otherId) : undefined;
+          suspended.delete(key);
+          execFrames(
+            paused.stack,
+            { self, other, scene, state, hooks, emitMessage: (message: string) => messages.add(message) },
+            clock,
+            (stack, until) => suspended.set(key, { stack, until, entityId: self.id, otherId: other?.id }),
+          );
+        }
+      }
+
+      // Los `esperar` de un script de interfaz se reanudan igual que los de una
+      // entidad, sobre el propio elemento (que puede haberse ocultado entre medias).
+      if (uiSuspended.size) {
+        for (const [key, paused] of Array.from(uiSuspended)) {
+          if (clock < paused.until) continue;
+          uiSuspended.delete(key);
+          const element = (scene.ui ?? []).find(u => u.id === paused.elementId);
+          if (!element || element.visible === false) continue;
+          execFrames(
+            paused.stack,
+            {
+              self: element as unknown as Entity,
+              scene,
+              state,
+              hooks,
+              emitMessage: (message: string) => uiMessages.add(message),
+            },
+            clock,
+            (stack, until) => uiSuspended.set(key, { stack, until, elementId: element.id }),
+          );
+        }
+      }
+
+      for (const message of messages) {
+        for (const entity of live) {
+          if (entity.x < -9000) continue;
+          for (const script of entity.scripts ?? []) {
+            if (script.event === "onMessage" && script.message === message) run(script, entity);
+          }
+        }
+      }
+
+      prevInput = { ...input };
+      prevScore = state.score;
+      prevWin = state.win;
+      prevDead = state.dead;
+    },
+  };
+}
+
+export const uid = () => Math.random().toString(36).slice(2, 10);
+
+function compileBlockListToJs(blocks: Block[], indent = "      "): string {
+  const lines: string[] = [];
+  for (const b of blockList(blocks)) {
+    switch (b.kind) {
+      case "jump":
+        lines.push(`${indent}if (target) target.vy = -${Math.abs(b.value ?? 520)};`);
+        break;
+      case "setVx":
+        lines.push(`${indent}if (target) target.vx = ${b.value ?? 0};`);
+        break;
+      case "setVy":
+        lines.push(`${indent}if (target) target.vy = ${b.value ?? 0};`);
+        break;
+      case "impulse":
+        lines.push(`${indent}if (target) { target.vx = (target.vx || 0) + ${b.x ?? 0}; target.vy = (target.vy || 0) + ${b.y ?? 0}; }`);
+        break;
+      case "setX":
+        lines.push(`${indent}if (target) target.x = ${b.value ?? 0};`);
+        break;
+      case "setY":
+        lines.push(`${indent}if (target) target.y = ${b.value ?? 0};`);
+        break;
+      case "moveX":
+        lines.push(`${indent}if (target) target.x = (target.x || 0) + ${b.value ?? 0};`);
+        break;
+      case "moveY":
+        lines.push(`${indent}if (target) target.y = (target.y || 0) + ${b.value ?? 0};`);
+        break;
+      case "moveSteps":
+        lines.push(`${indent}if (target) target.x = (target.x || 0) + (${b.value ?? 10} * (target.facing === -1 ? -1 : 1));`);
+        break;
+      case "flipVx":
+        lines.push(`${indent}if (target) target.vx = -(target.vx || 0);`);
+        break;
+      case "flipVy":
+        lines.push(`${indent}if (target) target.vy = -(target.vy || 0);`);
+        break;
+      case "bounceY":
+        lines.push(`${indent}if (target) target.vy = -(target.vy || 0) * ${((b.value ?? 80) / 100)};`);
+        break;
+      case "stop":
+        lines.push(`${indent}if (target) { target.vx = 0; target.vy = 0; }`);
+        break;
+      case "setSpeed":
+        lines.push(`${indent}if (target) { var dirSp = target.vx < 0 ? -1 : 1; target.vx = ${b.value ?? 0} * dirSp; }`);
+        break;
+      case "teleport":
+        lines.push(`${indent}if (target) { ${b.x !== undefined ? `target.x = ${b.x};` : ""} ${b.y !== undefined ? `target.y = ${b.y};` : ""} }`);
+        break;
+      case "addScore":
+        lines.push(`${indent}if (api && api.addScore) api.addScore(${b.value ?? 1});`);
+        break;
+      case "setScore":
+        lines.push(`${indent}if (api && api.state) api.state.score = ${b.value ?? 0};`);
+        break;
+      case "resetScore":
+        lines.push(`${indent}if (api && api.state) api.state.score = 0;`);
+        break;
+      case "addLives":
+        lines.push(`${indent}if (api && api.addLives) api.addLives(${b.value ?? 1});`);
+        break;
+      case "setLives":
+        lines.push(`${indent}if (api && api.state) api.state.lives = ${b.value ?? 1};`);
+        break;
+      case "destroySelf":
+        lines.push(`${indent}if (target) { if (api && api.destroyEntity) api.destroyEntity(target); else target.x = -99999; }`);
+        break;
+      case "destroyOther":
+        lines.push(`${indent}if (other) { if (api && api.destroyEntity) api.destroyEntity(other); else other.x = -99999; }`);
+        break;
+      case "win":
+        lines.push(`${indent}if (api && api.win) api.win();`);
+        break;
+      case "lose":
+      case "hurtPlayer":
+        lines.push(`${indent}if (api && api.lose) api.lose();`);
+        break;
+      case "restartScene":
+        lines.push(`${indent}if (api && api.restart) api.restart();`);
+        break;
+      case "playSound":
+        lines.push(`${indent}if (api && api.playSound) api.playSound(${JSON.stringify(b.soundUrl || b.soundName || b.text || "coin")});`);
+        break;
+      case "shake":
+        lines.push(`${indent}if (api && api.shake) api.shake(${Math.max(1, b.value ?? 8)}, 0.3);`);
+        break;
+      case "setColor":
+        if (b.color || b.text) {
+          lines.push(`${indent}if (target) target.color = ${JSON.stringify(b.color || b.text)};`);
+        }
+        break;
+      case "setBg":
+        if (b.color || b.text) {
+          lines.push(`${indent}if (api && api.setBg) api.setBg(${JSON.stringify(b.color || b.text)});`);
+        }
+        break;
+      case "setVisible":
+        lines.push(`${indent}if (target) target.visible = ${b.bool !== undefined ? JSON.stringify(b.bool) : "!(target.visible !== false)"};`);
+        break;
+      case "setOpacity":
+        lines.push(`${indent}if (target) target.opacity = ${Math.max(0, Math.min(1, (b.value ?? 100) / 100))};`);
+        break;
+      case "setSize":
+        lines.push(`${indent}if (target) { ${b.x ? `target.w = Math.max(4, ${b.x});` : ""} ${b.y ? `target.h = Math.max(4, ${b.y});` : ""} }`);
+        break;
+      case "changeSizeBy":
+        lines.push(`${indent}if (target) { var sf = Math.max(0.1, 1 + (${b.value ?? 10} / 100)); target.w = Math.max(4, Math.round(target.w * sf)); target.h = Math.max(4, Math.round(target.h * sf)); }`);
+        break;
+      case "setGravity":
+        lines.push(`${indent}if (target) target.gravity = ${b.bool !== undefined ? JSON.stringify(b.bool) : "!target.gravity"};`);
+        break;
+      case "setSceneGravity":
+        lines.push(`${indent}if (api && api.setGravity) api.setGravity(${Math.max(0, b.value ?? 1400)});`);
+        break;
+      case "setControllable":
+        lines.push(`${indent}if (target) target.controllable = ${b.bool !== undefined ? JSON.stringify(b.bool) : "!target.controllable"};`);
+        break;
+      case "setHazard":
+        lines.push(`${indent}if (target) target.hazard = ${b.bool !== undefined ? JSON.stringify(b.bool) : "!target.hazard"};`);
+        break;
+      case "setSolid":
+        lines.push(`${indent}if (target) target.solid = ${b.bool !== undefined ? JSON.stringify(b.bool) : "!target.solid"};`);
+        break;
+      case "setCollectible":
+        lines.push(`${indent}if (target) target.collectible = ${b.bool !== undefined ? JSON.stringify(b.bool) : "!target.collectible"};`);
+        break;
+      case "setGoalFlag":
+        lines.push(`${indent}if (target) target.goal = ${b.bool !== undefined ? JSON.stringify(b.bool) : "!target.goal"};`);
+        break;
+      case "spawnEntity":
+        lines.push(`${indent}if (api && api.spawnEntity) api.spawnEntity(${JSON.stringify(b.text || "coin")}, ${b.x !== undefined ? b.x : "target ? target.x : 160"}, ${b.y !== undefined ? b.y : "target ? target.y : 160"});`);
+        break;
+      case "cloneSelf":
+        lines.push(`${indent}if (target && api && api.spawnEntity) api.spawnEntity(target.kind || "box", (target.x || 0) + ${b.x ?? 20}, (target.y || 0) + ${b.y ?? 0});`);
+        break;
+      case "chase":
+        lines.push(`${indent}if (target && api && api.getPlayer) { var pl = api.getPlayer(); if (pl) target.vx = (pl.x >= target.x ? 1 : -1) * ${b.value ?? 120}; }`);
+        break;
+      case "faceTarget":
+        lines.push(`${indent}if (target && api && api.getPlayer) { var plF = api.getPlayer(); if (plF) target.vx = (plF.x >= target.x ? 1 : -1) * Math.abs(target.vx || 60); }`);
+        break;
+      case "knockback":
+        lines.push(`${indent}var kbT = other || target; if (kbT) { kbT.vx = ${b.x ?? 240}; kbT.vy = ${b.y ?? -320}; }`);
+        break;
+      case "pushAway":
+        lines.push(`${indent}if (target && api && api.getPlayer) { var plP = api.getPlayer(); if (plP) { target.vx = (target.x < plP.x ? -1 : 1) * ${b.value ?? 280}; target.vy = -180; } }`);
+        break;
+      case "say":
+      case "sayForSecs":
+      case "thinkForSecs":
+        lines.push(`${indent}if (target) { target._bubbleText = ${JSON.stringify(b.text ?? "¡Hola!")}; target._bubbleKind = ${JSON.stringify(b.kind === "thinkForSecs" ? "think" : "say")}; target._bubbleUntil = ${b.kind === "say" ? 0 : `(api && api.state ? api.state.time : 0) + ${Math.max(0.2, (b.value ?? 2000) / 1000)}`}; }`);
+        break;
+      case "clearBubble":
+        lines.push(`${indent}if (target) { target._bubbleText = null; target._bubbleUntil = 0; }`);
+        break;
+      case "setVariable":
+        lines.push(`${indent}if (api && api.scene) { api.scene.variables = api.scene.variables || {}; api.scene.variables[${JSON.stringify(b.text?.trim() || "variable")}] = ${b.value ?? 0}; }`);
+        break;
+      case "changeVariable":
+        lines.push(`${indent}if (api && api.scene) { api.scene.variables = api.scene.variables || {}; var vk = ${JSON.stringify(b.text?.trim() || "variable")}; api.scene.variables[vk] = (Number(api.scene.variables[vk]) || 0) + ${b.value ?? 1}; }`);
+        break;
+      case "repeat": {
+        const rep = Math.min(100, Math.max(1, Math.floor(b.repeat ?? b.value ?? 1)));
+        const inner = compileBlockListToJs(b.thenBlocks ?? [], indent + "  ");
+        if (inner) {
+          lines.push(`${indent}for (var ri = 0; ri < ${rep}; ri++) {\n${inner}\n${indent}}`);
+        }
+        break;
+      }
+      case "if": {
+        const v = b.value ?? 0;
+        const op = b.cond === "scoreLte" ? "<=" : ">=";
+        const thenJs = compileBlockListToJs(b.thenBlocks ?? [], indent + "  ");
+        const elseJs = compileBlockListToJs(b.elseBlocks ?? [], indent + "  ");
+        lines.push(`${indent}if (((api && api.state && api.state.score) || 0) ${op} ${v}) {\n${thenJs}\n${indent}}${elseJs ? ` else {\n${elseJs}\n${indent}}` : ""}`);
+        break;
+      }
+      default:
+        break;
+    }
+  }
+  return lines.join("\n");
+}
+
+/**
+ * Compila cualquier Script del motor en código JavaScript HTML5 autónomo
+ * (`window.AsternalRuntime.registerHook({...})`) sin depender del intérprete de bloques.
+ */
+export function compileScriptToHtml5Js(
+  script: Script,
+  ownerEntityId?: string,
+  ownerEntityKind?: EntityKind,
+): string {
+  const hookId = `html5-script-${script.id || uid()}`;
+  const bodyJs = compileBlockListToJs(script.blocks ?? [], "      ") || "      // Script HTML5 activo";
+  const targetResolver = ownerEntityId
+    ? `var target = self || (api && api.scene && api.scene.entities ? api.scene.entities.find(function(e) { return e.id === ${JSON.stringify(ownerEntityId)}; }) : null) || (api && api.getPlayer ? api.getPlayer() : null);`
+    : ownerEntityKind
+      ? `var target = self || (api && api.getEntities ? api.getEntities(${JSON.stringify(ownerEntityKind)})[0] : null) || (api && api.getPlayer ? api.getPlayer() : null);`
+      : `var target = self || (api && api.getPlayer ? api.getPlayer() : null);`;
+
+  const ev = script.event || "onUpdate";
+
+  if (ev === "onStart" || ev === "onCreate") {
+    return [
+      `(function() {`,
+      `  if (typeof window === "undefined" || !window.AsternalRuntime) return;`,
+      `  var selfRef = typeof self !== "undefined" ? self : null;`,
+      `  window.AsternalRuntime.registerHook({`,
+      `    id: ${JSON.stringify(hookId)},`,
+      `    onInit: function(api) {`,
+      `      var self = selfRef;`,
+      `      var other = null;`,
+      `      ${targetResolver}`,
+      bodyJs,
+      `    }`,
+      `  });`,
+      `})();`,
+    ].join("\n");
+  }
+
+  if (ev === "onCollide") {
+    const withKind = script.withKind || "any";
+    return [
+      `(function() {`,
+      `  if (typeof window === "undefined" || !window.AsternalRuntime) return;`,
+      `  var selfRef = typeof self !== "undefined" ? self : null;`,
+      `  window.AsternalRuntime.registerHook({`,
+      `    id: ${JSON.stringify(hookId)},`,
+      `    onCollide: function(a, b, api) {`,
+      `      var self = selfRef;`,
+      `      ${targetResolver}`,
+      `      if (!target) return;`,
+      `      var other = a && a.id === target.id ? b : (b && b.id === target.id ? a : null);`,
+      `      if (!other) return;`,
+      withKind !== "any" ? `      if (other.kind !== ${JSON.stringify(withKind)}) return;` : "",
+      bodyJs,
+      `    }`,
+      `  });`,
+      `})();`,
+    ].filter(Boolean).join("\n");
+  }
+
+  if (ev === "onKeyDown") {
+    const keyWant = script.key || "jump";
+    const keyCond =
+      keyWant === "left"
+        ? `(code === "ArrowLeft" || code === "KeyA" || key === "a" || key === "A")`
+        : keyWant === "right"
+          ? `(code === "ArrowRight" || code === "KeyD" || key === "d" || key === "D")`
+          : `(code === "Space" || code === "ArrowUp" || code === "KeyW" || key === " " || key === "w" || key === "W")`;
+    return [
+      `(function() {`,
+      `  if (typeof window === "undefined" || !window.AsternalRuntime) return;`,
+      `  var selfRef = typeof self !== "undefined" ? self : null;`,
+      `  var prevTouchInput = false;`,
+      `  window.AsternalRuntime.registerHook({`,
+      `    id: ${JSON.stringify(hookId)},`,
+      `    onKeyDown: function(code, key, api) {`,
+      `      if (!${keyCond}) return;`,
+      `      var self = selfRef;`,
+      `      var other = null;`,
+      `      ${targetResolver}`,
+      bodyJs,
+      `    },`,
+      `    onTick: function(api) {`,
+      `      var inp = api && api.getInput ? api.getInput() : {};`,
+      `      var nowPressed = Boolean(inp && inp[${JSON.stringify(keyWant)}]);`,
+      `      if (nowPressed && !prevTouchInput) {`,
+      `        var self = selfRef;`,
+      `        var other = null;`,
+      `        ${targetResolver}`,
+      bodyJs,
+      `      }`,
+      `      prevTouchInput = nowPressed;`,
+      `    }`,
+      `  });`,
+      `})();`,
+    ].join("\n");
+  }
+
+  if (ev === "onTimer") {
+    const ivSec = Math.max(0.05, (script.interval ?? 1000) / 1000);
+    return [
+      `(function() {`,
+      `  if (typeof window === "undefined" || !window.AsternalRuntime) return;`,
+      `  var selfRef = typeof self !== "undefined" ? self : null;`,
+      `  var acc = 0;`,
+      `  window.AsternalRuntime.registerHook({`,
+      `    id: ${JSON.stringify(hookId)},`,
+      `    onTick: function(api, dt) {`,
+      `      acc += (dt || 0.016);`,
+      `      if (acc >= ${ivSec}) {`,
+      `        acc -= ${ivSec};`,
+      `        var self = selfRef;`,
+      `        var other = null;`,
+      `        ${targetResolver}`,
+      bodyJs,
+      `      }`,
+      `    }`,
+      `  });`,
+      `})();`,
+    ].join("\n");
+  }
+
+  if (ev === "onWin" || ev === "onLose") {
+    const prop = ev === "onWin" ? "win" : "dead";
+    return [
+      `(function() {`,
+      `  if (typeof window === "undefined" || !window.AsternalRuntime) return;`,
+      `  var selfRef = typeof self !== "undefined" ? self : null;`,
+      `  var fired = false;`,
+      `  window.AsternalRuntime.registerHook({`,
+      `    id: ${JSON.stringify(hookId)},`,
+      `    onTick: function(api) {`,
+      `      var active = Boolean(api && api.state && api.state.${prop});`,
+      `      if (active && !fired) {`,
+      `        fired = true;`,
+      `        var self = selfRef;`,
+      `        var other = null;`,
+      `        ${targetResolver}`,
+      bodyJs,
+      `      } else if (!active) {`,
+      `        fired = false;`,
+      `      }`,
+      `    }`,
+      `  });`,
+      `})();`,
+    ].join("\n");
+  }
+
+  return [
+    `(function() {`,
+    `  if (typeof window === "undefined" || !window.AsternalRuntime) return;`,
+    `  var selfRef = typeof self !== "undefined" ? self : null;`,
+    `  window.AsternalRuntime.registerHook({`,
+    `    id: ${JSON.stringify(hookId)},`,
+    `    onTick: function(api, dt) {`,
+    `      var self = selfRef;`,
+    `      var other = null;`,
+    `      ${targetResolver}`,
+    bodyJs,
+    `    }`,
+    `  });`,
+    `})();`,
+  ].join("\n");
+}
+
