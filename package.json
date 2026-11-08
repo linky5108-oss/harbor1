@@ -68,7 +68,17 @@
     "tw-animate-css": "^1.3.4",
     "vaul": "^1.1.2",
     "vite-tsconfig-paths": "^6.0.2",
-    "zod": "^3.25.76"
+    "zod": "^3.25.76",
+    "@google/genai": "^2.30.0",
+    "@stripe/stripe-js": "^9.12.0",
+    "@supabase/supabase-js": "^2.110.2",
+    "@zumer/snapdom": "^2.24.3",
+    "convex": "^1.45.0",
+    "drawably": "^0.4.2",
+    "firebase": "^13.0.0",
+    "framer-motion": "^12.23.25",
+    "qrcode": "^1.5.4",
+    "react-icons": "^5.7.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
@@ -91,6 +101,7 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
     "vite": "8.1.5",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "@types/qrcode": "^1.5.6"
   }
 }
