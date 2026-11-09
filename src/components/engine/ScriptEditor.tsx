@@ -1,28 +1,16 @@
 import React, { useMemo, useRef, useState } from "react";
 import type { EntityKind } from "@/lib/engine/core";
 import {
-  applyScriptEdit,
   compileScriptToHtml5Js,
   ENTITY_EVENTS,
   EventType,
-  normalizeScripts,
   Script,
 } from "@/lib/engine/scripts";
 import { Code2, Loader2, Trash2, Undo2, X } from "lucide-react";
 import { ENGINE_KNOWLEDGE } from "@/lib/ai/engine-knowledge";
-import {
-  buildGeminiScriptEditPrompt,
-  buildGeminiScriptPrompt,
-  extractScriptsFromAiPayload,
-  parseAiJson,
-  requestScriptAi,
-  synthesizeScriptsFromRequest,
-} from "@/lib/ai/gemini-provider";
-import {
-  compileUserLanguageLocally,
-  loadUserLanguage,
-  sanitizeOrUpgradeHtml5ScriptJs,
-} from "@/lib/ai/custom-language";
+import { loadUserLanguage } from "@/lib/ai/custom-language";
+import { translateManualScript } from "@/lib/ai/manual-translator";
+import { Button } from "@/components/ui/button";
 
 interface ScriptEditorProps {
   scripts?: Script[];
@@ -70,7 +58,7 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
   return (
     <div
       className="fixed inset-0 z-50 bg-black/45 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in"
-      onClick={onClose}
+      onClick={() => { onClose(); }}
     >
       <div
         role="dialog"
@@ -84,13 +72,13 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
               {ownerLabel ? <>EVENTS · {ownerLabel}</> : effectiveName ? <>Scripts HTML5 · {effectiveName}</> : "Scripts HTML5"}
             </div>
           </div>
-          <button
-            onClick={onClose}
+          <Button
+            onClick={() => { onClose(); }}
             className="glass-control w-8 h-8 rounded-lg grid place-items-center text-muted-foreground hover:text-foreground"
             aria-label="Cerrar"
           >
             <X size={16} />
-          </button>
+          </Button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3">
@@ -109,12 +97,7 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
             )}
 
             {scripts.map((s, si) => {
-              const html5Code = sanitizeOrUpgradeHtml5ScriptJs(
-                s.compiledJs?.trim() || compileScriptToHtml5Js(s, undefined, effectiveKind),
-                s.customLanguageCode,
-                undefined,
-                effectiveKind,
-              );
+              const html5Code = s.compiledJs?.trim() || compileScriptToHtml5Js(s, undefined, effectiveKind);
               return (
                 <div
                   key={s.id}
@@ -137,7 +120,7 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
                     </div>
 
                     <div className="ml-auto flex items-center gap-1">
-                      <button
+                      <Button
                         type="button"
                         onClick={() =>
                           setEditingScriptId((cur) => (cur === s.id ? null : s.id))
@@ -150,14 +133,14 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
                         }`}
                       >
                         EDITAR
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         onClick={() => removeScript(s.id)}
                         className="w-7 h-7 rounded-lg bg-destructive/10 text-destructive border border-destructive/30 grid place-items-center hover:bg-destructive/20"
                         title="Eliminar script"
                       >
                         <Trash2 size={13} />
-                      </button>
+                      </Button>
                     </div>
                   </div>
 
@@ -226,98 +209,11 @@ function ScriptCodeBox({
     const controller = new AbortController();
     abortRef.current = controller;
     try {
-      const wrappedMatch = code.match(/^\s*<script\b[^>]*>([\s\S]*?)<\/script>\s*$/i);
-      const strippedHtmlScript = (wrappedMatch ? wrappedMatch[1] : code).trim();
-      const isDirectJs =
-        /(?:window\.AsternalRuntime|registerHook|document\.getElementById|requestAnimationFrame|\b(?:const|let|var|function)\s+[a-zA-Z_$]|\bapi\.(?:getPlayer|getEntities|spawnEntity|addScore|addLives|setGravity|setBg|shake|playSound)\b)/i.test(
-          strippedHtmlScript,
-        );
-
-      const localCompiled = compileUserLanguageLocally(code, userLanguage, {
-        targetEntityKind: targetKind,
-        allowedEvents,
-      });
-
-      let valid: Script[] = [];
-      let aiCustomJs = isDirectJs ? strippedHtmlScript : "";
-
-      if (!isDirectJs) {
-        try {
-          const prompt = buildGeminiScriptPrompt({
-            userRequest: code,
-            engineKnowledge: ENGINE_KNOWLEDGE,
-            targetEntityKind: targetKind,
-            projectSummary,
-          });
-          const res = await requestScriptAi(prompt, {
-            sessionId: `new-${targetKind ?? "entity"}`,
-            signal: controller.signal,
-          });
-          const parsed = parseAiJson<unknown>(res.text);
-          const extracted = extractScriptsFromAiPayload(parsed);
-          if (extracted.customRuntimeJs) aiCustomJs = extracted.customRuntimeJs;
-          const normalized = normalizeScripts(extracted.scripts).filter((s) =>
-            allowedEvents.includes(s.event),
-          );
-          if (normalized.length > 0) {
-            valid = normalized;
-          }
-        } catch {
-          // Fallback local directo
-        }
-      }
-
-      if (valid.length === 0 && aiCustomJs.trim()) {
-        valid = [
-          {
-            id: `html5-${Date.now().toString(36)}`,
-            event: allowedEvents[0] ?? "onUpdate",
-            blocks: [],
-            compiledJs: aiCustomJs.trim(),
-            customLanguageCode: code,
-          },
-        ];
-      }
-
-      if (valid.length === 0 && localCompiled.compiledScripts.length > 0) {
-        valid = localCompiled.compiledScripts;
-      }
-
-      if (valid.length === 0) {
-        valid = normalizeScripts(
-          synthesizeScriptsFromRequest(code, allowedEvents),
-        ).filter((s) => allowedEvents.includes(s.event));
-      }
-
-      valid = valid.map((sc) => {
-        const candidateAiJs = sc.compiledJs?.trim() || aiCustomJs.trim();
-        const compiledFromBlocks =
-          sc.blocks && sc.blocks.length > 0
-            ? compileScriptToHtml5Js(sc, undefined, targetKind)
-            : "";
-        const rawHtml5Js =
-          candidateAiJs ||
-          compiledFromBlocks ||
-          localCompiled.compiledJs ||
-          compileScriptToHtml5Js(sc, undefined, targetKind);
-        const html5Js = sanitizeOrUpgradeHtml5ScriptJs(
-          isDirectJs ? strippedHtmlScript : rawHtml5Js,
-          code,
-          undefined,
-          targetKind,
-        );
-        return {
-          ...sc,
-          blocks: sc.blocks ?? [],
-          customLanguageCode: code,
-          languageName: userLanguage.name,
-          compiledJs: html5Js,
-        };
-      });
-
-      if (valid.length === 0) {
-        throw new Error("No se pudo aplicar el código.");
-      }
+      const translated = await translateManualScript({
+        source: code, language: userLanguage.name,
+        dictionary: JSON.stringify(userLanguage), targetKind, projectSummary,
+      }, controller.signal);
+      const valid = [translated];
       onApply(valid);
       setReq("");
     } catch (e: unknown) {
@@ -345,7 +241,7 @@ function ScriptCodeBox({
           {err}
         </div>
       )}
-      <button
+      <Button
         type="button"
         disabled={busy || !req.trim()}
         onClick={() => void applyCode()}
@@ -353,7 +249,8 @@ function ScriptCodeBox({
       >
         {busy && <Loader2 size={13} className="animate-spin" />}
         <span>{busy ? "Aplicando..." : "Aplicar"}</span>
-      </button>
+      </Button>
+      {busy && <Button variant="outline" onClick={() => abortRef.current?.abort()}>Detener</Button>}
     </div>
   );
 }
@@ -388,93 +285,13 @@ function ScriptContinuationBox({
     const controller = new AbortController();
     abortRef.current = controller;
     try {
-      const wrappedEdit = clean.match(/^\s*<script\b[^>]*>([\s\S]*?)<\/script>\s*$/i);
-      const strippedHtmlScript = (wrappedEdit ? wrappedEdit[1] : clean).trim();
-      const isDirectJs =
-        /(?:window\.AsternalRuntime|registerHook|document\.getElementById|requestAnimationFrame|\b(?:const|let|var|function)\s+[a-zA-Z_$]|\bapi\.(?:getPlayer|getEntities|spawnEntity|addScore|addLives|setGravity|setBg|shake|playSound)\b)/i.test(
-          strippedHtmlScript,
-        );
-
-      if (isDirectJs) {
-        const sanitizedDirect = sanitizeOrUpgradeHtml5ScriptJs(
-          strippedHtmlScript,
-          script.customLanguageCode,
-          undefined,
-          targetKind,
-        );
-        setPrevious(script);
-        onApply({
-          ...script,
-          compiledJs: sanitizedDirect,
-        });
-        onClose();
-        return;
-      }
-
-      const localCompiled = compileUserLanguageLocally(clean, userLanguage, {
-        targetEntityKind: targetKind,
-        allowedEvents: [script.event],
-      });
-
-      let applied: ReturnType<typeof applyScriptEdit> = null;
-      let aiCustomJs = "";
-
-      try {
-        const prompt = buildGeminiScriptEditPrompt({
-          instruction: clean,
-          engineKnowledge: ENGINE_KNOWLEDGE,
-          currentScript: script,
-          targetEntityKind: targetKind,
-          projectSummary,
-        });
-        const res = await requestScriptAi(prompt, {
-          sessionId: `script-${script.id}`,
-          signal: controller.signal,
-        });
-        const parsed = parseAiJson<unknown>(res.text);
-        const extracted = extractScriptsFromAiPayload(parsed);
-        if (extracted.customRuntimeJs) aiCustomJs = extracted.customRuntimeJs;
-        const candidate = extracted.scripts[0] ?? (Array.isArray(parsed) ? parsed[0] : parsed);
-        applied = applyScriptEdit(script, candidate);
-      } catch {
-        // fallback local
-      }
-
-      if (!applied && localCompiled.compiledScripts.length > 0) {
-        applied = applyScriptEdit(script, localCompiled.compiledScripts[0]);
-      }
-
-      if (!applied) {
-        const fallback = synthesizeScriptsFromRequest(clean, [script.event])[0];
-        applied = applyScriptEdit(script, fallback);
-      }
-
-      const nextScriptBase = applied?.script ?? script;
-      const compiledFromBlocks =
-        nextScriptBase.blocks && nextScriptBase.blocks.length > 0
-          ? compileScriptToHtml5Js(nextScriptBase, undefined, targetKind)
-          : "";
-      const rawHtml5Js =
-        nextScriptBase.compiledJs?.trim() ||
-        aiCustomJs.trim() ||
-        compiledFromBlocks ||
-        localCompiled.compiledJs ||
-        compileScriptToHtml5Js(nextScriptBase, undefined, targetKind);
-      const html5Js = sanitizeOrUpgradeHtml5ScriptJs(
-        rawHtml5Js,
-        clean,
-        undefined,
-        targetKind,
-      );
-
+      const translated = await translateManualScript({
+        source: clean, language: userLanguage.name,
+        dictionary: JSON.stringify(userLanguage), targetKind, projectSummary,
+        previousCode: script.compiledJs,
+      }, controller.signal, undefined, script.id);
       setPrevious(script);
-      onApply({
-        ...nextScriptBase,
-        blocks: nextScriptBase.blocks ?? [],
-        customLanguageCode: clean,
-        languageName: userLanguage.name,
-        compiledJs: html5Js,
-      });
+      onApply(translated);
       onClose();
     } catch (e: unknown) {
       if (!controller.signal.aborted) {
@@ -502,7 +319,8 @@ function ScriptContinuationBox({
         </div>
       )}
       <div className="flex gap-2">
-        <button
+        {busy && <Button variant="outline" onClick={() => abortRef.current?.abort()}>Detener</Button>}
+        <Button
           type="button"
           disabled={busy || !instruction.trim()}
           onClick={() => void edit()}
@@ -510,9 +328,9 @@ function ScriptContinuationBox({
         >
           {busy && <Loader2 size={12} className="animate-spin" />}
           <span>{busy ? "Aplicando..." : "Aplicar"}</span>
-        </button>
+        </Button>
         {previous && !busy && (
-          <button
+          <Button
             type="button"
             onClick={() => {
               onApply(previous);
@@ -522,7 +340,7 @@ function ScriptContinuationBox({
           >
             <Undo2 size={11} />
             DESHACER
-          </button>
+          </Button>
         )}
       </div>
     </div>

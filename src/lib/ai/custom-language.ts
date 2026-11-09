@@ -2397,106 +2397,8 @@ export function compileUserLanguageLocally(
         continue;
       }
 
-      // 17. GENERADOR PROCEDURAL UNIVERSAL HTML5 (Crea cualquier objeto, figura, entidad o regla libre que no exista en el editor)
-      const cleanLabel = rawAction.split(" (")[0].trim().slice(0, 48);
-      const customColor =
-        rawAction.match(/#[0-9a-fA-F]{3,6}/)?.[0] ||
-        (/rojo|red|fuego/.test(lower)
-          ? "#f43f5e"
-          : /verde|green|bosque|acido/.test(lower)
-            ? "#22c55e"
-            : /amarillo|oro|sol|luz|rayo/.test(lower)
-              ? "#facc15"
-              : /morado|magia|ombra|oscuro/.test(lower)
-                ? "#a855f7"
-                : /naranja|explosion/.test(lower)
-                  ? "#fb923c"
-                  : "#38bdf8");
-      const customSize = numVal ? Math.max(16, Math.min(140, Math.abs(numVal))) : 42;
-      const isPointerTrigger = /clic|click|tocar|toque|raton|mouse|puntero|dedo/.test(lower + " " + block.header.toLowerCase());
-      const isSpawnOrCreate =
-        /crear|invocar|generar|spawnear|dibujar|poner|aparecer|construir|añadir|agregar|objeto|entidad|bloque|plataforma|enemigo|moneda|figura|circulo|círculo|estrella|triangulo|triángulo|Poligono|polígono|casa|arbol|árbol|castillo|puente|escalera|caja|roca|piedra|nube|flor|planta|animal|dragon|dragón|robot/.test(
-          lower,
-        );
-
-      if (isPointerTrigger) {
-        hasSpecificMatch = true;
-        jsPointerDownSections.push(`
-          if (api && typeof api.spawnEntity === "function") {
-            api.spawnEntity({
-              name: ${JSON.stringify(cleanLabel)},
-              x: worldX - ${Math.round(customSize / 2)},
-              y: worldY - ${Math.round(customSize / 2)},
-              w: ${customSize},
-              h: ${customSize},
-              color: ${JSON.stringify(customColor)},
-              solid: ${/bloque|plataforma|suelo|pared|caja|roca|puente/.test(lower)},
-              gravity: ${/caer|gravedad|roca|caja/.test(lower)},
-              customLabel: ${JSON.stringify(cleanLabel.slice(0, 18))}
-            });
-          }
-          if (api && typeof api.emitBurst === "function") {
-            api.emitBurst(worldX, worldY, ${JSON.stringify(customColor)}, 14);
-          }
-        `);
-        explanations.push(`Crea "${cleanLabel}" dinámicamente en el punto exacto donde el usuario hace clic o toca el lienzo HTML5.`);
-        continue;
-      }
-
-      if (isSpawnOrCreate || !hasSpecificMatch) {
-        hasSpecificMatch = true;
-        const movesAround = /mover|caminar|volar|flotar|patrullar|girar|orbitar|perseguir|rebotar/.test(lower);
-        jsActionStatements.push(`
-          var refEnt = self || (api && typeof api.getPlayer === "function" ? api.getPlayer() : null);
-          var spawnX = refEnt ? (refEnt.x || 160) + (refEnt.facing === -1 ? -95 : 95) : 240;
-          var spawnY = refEnt ? (refEnt.y || 220) : 220;
-          if (api && typeof api.spawnEntity === "function") {
-            api.spawnEntity({
-              name: ${JSON.stringify(cleanLabel)},
-              x: spawnX,
-              y: spawnY,
-              w: ${customSize},
-              h: ${customSize},
-              color: ${JSON.stringify(customColor)},
-              solid: ${/bloque|plataforma|suelo|pared|puente|escalera|castillo|casa|caja|roca/.test(lower)},
-              gravity: ${/gravedad|caer|caminar|rebotar/.test(lower)},
-              customLabel: ${JSON.stringify(cleanLabel.slice(0, 18))},
-              onTick: function(ent, rApi, dtStep) {
-                ent._customT = (ent._customT || 0) + (dtStep || 0.016);
-                if (${movesAround}) {
-                  ent.x += Math.cos(ent._customT * 2.2) * 90 * (dtStep || 0.016);
-                  ent.y += Math.sin(ent._customT * 3.0) * 35 * (dtStep || 0.016);
-                }
-              },
-              onDraw: function(ctx, ent) {
-                ctx.save();
-                ctx.fillStyle = ent.color || ${JSON.stringify(customColor)};
-                ctx.strokeStyle = "#0f172a";
-                ctx.lineWidth = 2.5;
-                ctx.beginPath();
-                if (${/circulo|círculo|esfera|bola|burbuja|sol|luna/.test(lower)}) {
-                  ctx.arc(ent.x + ent.w / 2, ent.y + ent.h / 2, Math.min(ent.w, ent.h) / 2, 0, Math.PI * 2);
-                } else {
-                  ctx.roundRect(ent.x, ent.y, ent.w, ent.h, 8);
-                }
-                ctx.fill();
-                ctx.stroke();
-                if (ent.customLabel) {
-                  ctx.fillStyle = "#f8fafc";
-                  ctx.font = "bold 10px Inter, system-ui, sans-serif";
-                  ctx.textAlign = "center";
-                  ctx.fillText(ent.customLabel, ent.x + ent.w / 2, ent.y - 6);
-                }
-                ctx.restore();
-              }
-            });
-          }
-          if (api && typeof api.emitBurst === "function") {
-            api.emitBurst(spawnX + ${Math.round(customSize / 2)}, spawnY + ${Math.round(customSize / 2)}, ${JSON.stringify(customColor)}, 14);
-          }
-        `);
-        explanations.push(`Crea e instancia en HTML5 Canvas "${cleanLabel}" con su propio renderizado procedural y comportamiento en vivo.`);
-      }
+      // Unknown syntax must never create or approximate gameplay.
+      explanations.push(`Instrucción no reconocida: ${rawAction}. Traduce este script con Lovable AI.`);
     }
 
     const scriptObj: Script = {
@@ -2719,22 +2621,6 @@ export function sanitizeOrUpgradeHtml5ScriptJs(
     }
   }
 
-  if (customLanguageCode && customLanguageCode.trim()) {
-    try {
-      const lang = loadUserLanguage();
-      const recompiled = compileUserLanguageLocally(customLanguageCode, lang, {
-        targetEntityId: targetEntityId ?? null,
-        targetEntityKind,
-      });
-      if (recompiled.compiledJs && recompiled.compiledJs.trim()) {
-        new Function("api", "self", recompiled.compiledJs);
-        return recompiled.compiledJs;
-      }
-    } catch {
-      // Fallback seguro abajo
-    }
-  }
-
-  return "// Script HTML5 validado";
+  // Never retranslate saved source with the retired heuristic compiler.
+  return "// Script no ejecutado: requiere traducción con Lovable AI";
 }
-
