@@ -2,6 +2,7 @@ import type { CustomRuntimeConfig, CustomSoundSynth, Entity, Project, Scene, Spr
 import { DEFAULT_LAYER_ID, MAIN_GOAL_PRESET, ensureSceneLayers, isMainGoalEntity, uid } from "./core";
 import { shadeColor } from "./character";
 import { loadCustomSounds, type CustomSound } from "./sfx";
+import { bindManualCode } from "../ai/manual-script";
 import { isLegacyPlaceholderScriptJs, sanitizeOrUpgradeHtml5ScriptJs } from "../ai/custom-language";
 
 export interface Html5GameOptions {
@@ -163,18 +164,18 @@ export function buildStandaloneGameHtml(options: Html5GameOptions): string {
     for (const ent of sc.entities ?? []) {
       for (const s of ent.scripts ?? []) {
         if ((s.compiledJs && s.compiledJs.trim()) || (s.customLanguageCode && s.customLanguageCode.trim())) {
-          const snippet = sanitizeOrUpgradeHtml5ScriptJs(
+          const snippet = bindManualCode(sanitizeOrUpgradeHtml5ScriptJs(
             s.compiledJs,
             s.customLanguageCode,
             ent.id,
             ent.kind,
-          ).trim();
+          ), ent.id, s.id).trim();
           if (snippet && !collectedEntityJsChunks.some((c) => c.includes(snippet))) {
             collectedEntityJsChunks.push(snippet);
             const safeSnippet = snippet.replace(/<\/script/gi, "<\\/script");
             try {
               new Function(safeSnippet);
-              independentScriptTags.push(
+              if (!s.compiledJs?.startsWith("// ASTERNAL_MANUAL_V2")) independentScriptTags.push(
                 `<script id="asternal-script-${escapeHtmlText(s.id)}" data-asternal-script-id="${escapeHtmlText(s.id)}" data-entity-id="${escapeHtmlText(ent.id)}">\n${safeSnippet}\n</script>`,
               );
             } catch {

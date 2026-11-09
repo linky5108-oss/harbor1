@@ -28,3 +28,6 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+- Manual script creation and editing use the authenticated streaming Lovable AI translator, never heuristic fallbacks, so failures cannot silently invent gameplay.
+- V2 scripts use host-provided registerHook and resolveSelf closures bound per entity ID and script ID, so owner selection and hook deduplication survive export and scene changes.

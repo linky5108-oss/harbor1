@@ -1,3 +1,4 @@
+import { translateManualScript } from "@/lib/ai/manual-translator";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { CustomSoundSynth, Entity, EntityKind, Project, Scene } from "@/lib/engine/core";
 import {
@@ -150,97 +151,15 @@ export const OrionAiModeScreen: React.FC<OrionAiModeScreenProps> = ({
         activeScene.entities[0] ??
         null;
 
-      const localCompiled = compileUserLanguageLocally(code, userLanguage, {
-        targetEntityId: recipientEntity?.id ?? null,
-        targetEntityKind: recipientEntity?.kind,
-        allowedEvents: ENTITY_EVENTS,
-      });
-
-      let generated: Script[] = [];
-      let aiCustomJs = "";
-      let aiExplanation = "";
-      let aiSynthSounds: Record<string, CustomSoundSynth> = {};
-      let aiPatch: Record<string, unknown> | undefined;
-
-      try {
-        const prompt = buildGeminiScriptPrompt({
-          userRequest: code,
-          engineKnowledge: ENGINE_KNOWLEDGE,
-          targetEntityKind: recipientEntity?.kind,
-          projectSummary: summarizeProjectForOrionArchitect(project),
-        });
-        const result = await requestScriptAi(prompt, {
-          sessionId: `script-${recipientEntity?.id ?? "scene"}`,
-          signal: controller.signal,
-        });
-        const parsed = parseAiJson<unknown>(result.text);
-        const extracted = extractScriptsFromAiPayload(parsed);
-        if (extracted.customRuntimeJs) aiCustomJs = extracted.customRuntimeJs;
-        if (extracted.explanation) aiExplanation = extracted.explanation;
-        if (extracted.synthSounds) {
-          aiSynthSounds = extracted.synthSounds as Record<string, CustomSoundSynth>;
-        }
-        if (extracted.patch) {
-          aiPatch = extracted.patch;
-        }
-
-        // Sin límites: se aceptan todos los scripts de la IA, aunque usen
-        // eventos o mecánicas que el editor visual no ofrece.
-        const aiScripts = normalizeScripts(extracted.scripts);
-        if (aiScripts.length > 0) {
-          generated = aiScripts;
-        }
-      } catch {
-        // Si la petición remota falla, se usa el compilador local HTML5 sin límites
-      }
-
-      if (generated.length === 0 && localCompiled.compiledScripts.length > 0) {
-        generated = localCompiled.compiledScripts;
-      }
-
-      if (generated.length === 0) {
-        generated = normalizeScripts(
-          synthesizeScriptsFromRequest(code, ENTITY_EVENTS),
-        ).filter((s) => ENTITY_EVENTS.includes(s.event));
-      }
-
-      // El código libre de la IA tiene prioridad y no se mezcla con plantillas del editor.
-      const rawEffectiveJs = aiCustomJs || generated[0]?.compiledJs || localCompiled.compiledJs;
-
-      const effectiveCompiledJs = sanitizeOrUpgradeHtml5ScriptJs(
-        rawEffectiveJs,
-        code,
-        recipientEntity?.id,
-        recipientEntity?.kind,
-      );
-
-      generated = generated.map((sc) => {
-        const scJs = sanitizeOrUpgradeHtml5ScriptJs(
-          sc.compiledJs || effectiveCompiledJs || compileScriptToHtml5Js(sc, recipientEntity?.id),
-          code,
-          recipientEntity?.id,
-          recipientEntity?.kind,
-        );
-        return {
-          ...sc,
-          customLanguageCode: code,
-          languageName: "HTML5",
-          compiledJs: scJs,
-          aiExplanation: aiExplanation || sc.aiExplanation || localCompiled.explanation,
-        };
-      });
-
-      let baseProject = project;
-      if (aiPatch) {
-        baseProject = applyOrionPatchToProject(baseProject, {
-          reply: aiExplanation || localCompiled.explanation,
-          changesSummary: [],
-          ...(aiPatch as Partial<OrionEditPatch>),
-          entityUpdates: undefined,
-          customRuntimeJs: undefined,
-        });
-      }
-
+      const translated = await translateManualScript({source: code, language: userLanguage.name,
+        dictionary: JSON.stringify(userLanguage), targetKind: recipientEntity?.kind,
+        targetName: recipientEntity?.name, projectSummary: summarizeProjectForOrionArchitect(project)}, controller.signal);
+      const generated = [translated];
+      const effectiveCompiledJs = translated.compiledJs || "";
+      const aiExplanation = translated.aiExplanation || "";
+      const aiSynthSounds = {};
+      const localCompiled = {programId: translated.id, title: code.slice(0, 60), explanation: aiExplanation, detectedKeywords: []};
+      const baseProject = project;
       const currentSceneAfterPatch =
         baseProject.scenes.find((s) => s.id === activeScene.id) ?? activeScene;
 
@@ -332,91 +251,15 @@ export const OrionAiModeScreen: React.FC<OrionAiModeScreenProps> = ({
     setErrorMessage(null);
 
     try {
-      const localCompiled = compileUserLanguageLocally(instruction, userLanguage, {
-        targetEntityId: entity.id,
-        targetEntityKind: entity.kind,
-        allowedEvents: [script.event],
-      });
-
-      let updatedScript: Script | null = null;
-
-      try {
-        const prompt = buildGeminiScriptEditPrompt({
-          instruction,
-          engineKnowledge: ENGINE_KNOWLEDGE,
-          currentScript: script,
-          targetEntityKind: entity.kind,
-          projectSummary: summarizeProjectForOrionArchitect(project),
-        });
-        const res = await requestScriptAi(prompt, {
-          sessionId: `edit-script-${script.id}`,
-        });
-        const parsed = parseAiJson<unknown>(res.text);
-        const extracted = extractScriptsFromAiPayload(parsed);
-        const normalized = normalizeScripts(extracted.scripts);
-        if (normalized.length > 0) {
-          const aiJs = extracted.customRuntimeJs || normalized[0].compiledJs;
-          const nextJs = sanitizeOrUpgradeHtml5ScriptJs(
-            aiJs || localCompiled.compiledJs || compileScriptToHtml5Js(normalized[0], entity.id),
-            instruction,
-            entity.id,
-            entity.kind,
-          );
-          updatedScript = {
-            ...normalized[0],
-            id: script.id,
-            event: normalized[0].event ?? script.event,
-            customLanguageCode: instruction,
-            languageName: "HTML5",
-            compiledJs: nextJs,
-          };
-        }
-      } catch {
-        // fallback local HTML5
-      }
-
-      if (!updatedScript && localCompiled.compiledScripts.length > 0) {
-        const nextJs = sanitizeOrUpgradeHtml5ScriptJs(
-          localCompiled.compiledJs,
-          instruction,
-          entity.id,
-          entity.kind,
-        );
-        updatedScript = {
-          ...localCompiled.compiledScripts[0],
-          id: script.id,
-          event: localCompiled.compiledScripts[0].event ?? script.event,
-          customLanguageCode: instruction,
-          languageName: "HTML5",
-          compiledJs: nextJs,
-        };
-      }
-
-      if (!updatedScript) {
-        const fallback = normalizeScripts(
-          synthesizeScriptsFromRequest(instruction, [script.event]),
-        );
-        const nextJs = sanitizeOrUpgradeHtml5ScriptJs(
-          fallback[0]?.compiledJs || localCompiled.compiledJs || script.compiledJs,
-          instruction,
-          entity.id,
-          entity.kind,
-        );
-        updatedScript = {
-          ...(fallback[0] ?? script),
-          id: script.id,
-          event: script.event,
-          customLanguageCode: instruction,
-          languageName: "HTML5",
-          compiledJs: nextJs,
-        };
-      }
+      const updatedScript = await translateManualScript({source: instruction, language: userLanguage.name,
+        dictionary: JSON.stringify(userLanguage), targetKind: entity.kind, targetName: entity.name,
+        projectSummary: summarizeProjectForOrionArchitect(project), previousCode: script.compiledJs}, undefined, undefined, script.id);
 
       const nextEntities = activeScene.entities.map((e) => {
         if (e.id !== entity.id) return e;
         return {
           ...e,
-          scripts: (e.scripts ?? []).map((s) => (s.id === script.id ? updatedScript! : s)),
+          scripts: (e.scripts ?? []).map((s) => (s.id === script.id ? updatedScript : s)),
         };
       });
 
