@@ -4,7 +4,7 @@
  * Backend: Supabase (sincronizado entre todos los dispositivos).
  */
 
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase/legacy-client";
 
 /* ─── Types ─── */
 

@@ -1,5 +1,5 @@
 // @ts-nocheck — Chat adapter (same Supabase client + helpers as api.ts)
-import { supabase, hasSupabaseConfig, isSchemaMissing } from "@/integrations/supabase/client";
+import { supabase, hasSupabaseConfig, isSchemaMissing } from "@/lib/supabase/legacy-client";
 import { signMediaUrls, uploadMedia } from "@/lib/social/api";
 import type { Profile } from "@/lib/social/api";
 

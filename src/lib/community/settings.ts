@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase/legacy-client";
 import { isAdmin } from "@/lib/social/api";
 import {
   DEFAULT_COMMUNITY_SETTINGS,

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Settings, Layers, Copy, X, Eye, EyeOff, Lock, Unlock, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, Trash2, Plus, Upload, Home, MousePointer2, Boxes, Eraser, SlidersHorizontal, Image as ImageIcon, Layers3, Play, LibraryBig, Save, Pencil, Sparkles, Code2 } from "lucide-react";
 import { schedulePushToCloud, scheduleAssetLibraryPush, pullAssetLibraryFromCloud, activateCloudProjectIfBlank } from "@/lib/engine/cloud-sync";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase/legacy-client";
 import { Link, useRouter } from "@tanstack/react-router";
 import { PublishGameDialog } from "./PublishGameDialog";
 import type { AudioAsset, CustomSoundSynth, EntityKind, Project, SpriteAsset, Entity, Scene, Hitbox, SceneLayer } from "@/lib/engine/core";

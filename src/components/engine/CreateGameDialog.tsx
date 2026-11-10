@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase/legacy-client";
 import { publishWebGame } from "@/lib/social/api";
 import { CREATE_GAME_FIELD_CLASS } from "@/lib/engine/create-game-field";
 import { createProject } from "@/lib/engine/storage";

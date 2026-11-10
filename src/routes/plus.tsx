@@ -12,7 +12,7 @@ import { SubPageHeader } from "@/components/social/SubPageHeader";
 import { PLUS_FRAMES, plusFrameColor } from "@/lib/social/plus-frames";
 import { NAME_EFFECTS, nameEffectClass, nameEffectLabel } from "@/lib/social/name-effects";
 import { filterStateClass } from "@/lib/ui/filter-control";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase/legacy-client";
 import {
   getMyProfile, claimPlusOrbes, updatePlusSettings,
   isPlusActive,

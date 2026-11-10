@@ -6,7 +6,7 @@ import { markProjectPublished, peekCurrentProjectId } from "@/lib/engine/storage
 import { summarizeGameForOrion } from "@/lib/ai/community-orion";
 import { reviewSubmission } from "@/lib/moderation/engine";
 import { Upload, Loader2, CheckCircle2, ImagePlus, Images, X, GitFork, Sparkles, Move, RotateCcw } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase/legacy-client";
 import { useNavigate } from "@tanstack/react-router";
 import type { Project } from "@/lib/engine/core";
 import { coverFrameStyle, DEFAULT_COVER_FRAME, normaliseCoverFrame, type CoverFrame } from "@/lib/social/cover-frame";

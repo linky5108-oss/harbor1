@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase/legacy-client";
 import { fileToDataURL } from "@/lib/engine/images";
 import {
   initForumCategories, getForumCategories, getForumThreads, getForumThread,

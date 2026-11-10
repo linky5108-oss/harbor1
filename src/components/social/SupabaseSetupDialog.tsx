@@ -20,7 +20,7 @@ import {
 } from "@/lib/supabase/setup";
 import {
   saveSupabaseCredentials,
-} from "@/integrations/supabase/client";
+} from "@/lib/supabase/legacy-client";
 import {
   Database, Loader2, CheckCircle2, AlertTriangle, ShieldCheck, KeyRound, ExternalLink, Plug, RefreshCw, Save, Link2, Copy, TerminalSquare, Download, Sparkles,
 } from "lucide-react";

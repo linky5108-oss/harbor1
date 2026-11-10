@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState, useMemo } from "react";
 import { Sparkles, TrendingUp, TrendingDown, Gift, Gamepad2, Loader2, Wallet, BarChart3, ExternalLink } from "lucide-react";
 import { SubPageHeader } from "@/components/social/SubPageHeader";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase/legacy-client";
 import { getMyProfile, fetchAllOrbeTransactions, type OrbeTx, type Profile } from "@/lib/social/api";
 
 export const Route = createFileRoute("/orbes")({

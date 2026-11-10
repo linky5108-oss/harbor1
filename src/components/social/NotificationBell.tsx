@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Bell } from "lucide-react";
 import { countUnreadNotifications } from "@/lib/social/api";
 import { NotificationsPanel } from "./NotificationsPanel";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase/legacy-client";
 
 /**
  * Campana de notificaciones: muestra el contador de no leídas en la cabecera y

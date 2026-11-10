@@ -70,7 +70,7 @@ import {
 import type { WorkThread } from "@/lib/social/work";
 import { TaskManager, FileManager, ThreadsManager, ThreadView, ProjectsManager } from "./WorkChatPanel";
 import { GlobalSearchPanel } from "./GlobalSearchPanel";
-import { supabase, hasSupabaseConfig, saveSupabaseCredentials } from "@/integrations/supabase/client";
+import { supabase, hasSupabaseConfig, saveSupabaseCredentials } from "@/lib/supabase/legacy-client";
 import { UserName } from "./UserName";
 import { getMyProfile, getMyOrbes, isAdmin, pushNotification, uploadAvatar } from "@/lib/social/api";
 import type { Profile } from "@/lib/social/api";

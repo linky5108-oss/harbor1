@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase/legacy-client";
 import { fetchFeed, getMyProfile, isMod, type PostWithMeta, type Profile } from "@/lib/social/api";
 import { PostComposer } from "@/components/social/PostComposer";
 import { PostCard } from "@/components/social/PostCard";
