@@ -158,7 +158,7 @@ export const OrionAiModeScreen: React.FC<OrionAiModeScreenProps> = ({
       const effectiveCompiledJs = translated.compiledJs || "";
       const aiExplanation = translated.aiExplanation || "";
       const aiSynthSounds = {};
-      const localCompiled = {programId: translated.id, title: code.slice(0, 60), explanation: aiExplanation, detectedKeywords: []};
+      const localCompiled = {programId: translated.id, title: code.slice(0, 60), explanation: aiExplanation, detectedKeywords: [] as typeof userLanguage.dictionary, synthSounds: {} as Record<string, unknown>};
       const baseProject = project;
       const currentSceneAfterPatch =
         baseProject.scenes.find((s) => s.id === activeScene.id) ?? activeScene;

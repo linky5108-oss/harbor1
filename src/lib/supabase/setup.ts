@@ -8,7 +8,7 @@
  * variables de entorno inyectadas al compilar), por lo que el usuario puede
  * pegarlas directamente en el diálogo si el entorno no las inyecta.
  */
-import { supabase, getSupabaseUrl, getSupabaseAnonKey } from "@/integrations/supabase/client";
+import { supabase, getSupabaseUrl, getSupabaseAnonKey } from "@/lib/supabase/legacy-client";
 // Importa el script SQL completo como texto crudo (Vite ?raw)
 import schemaSql from "../../../supabase-setup.sql?raw";
 import { CHAT_SCHEMA_SQL } from "./chat-schema";

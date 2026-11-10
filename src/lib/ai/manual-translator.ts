@@ -39,5 +39,5 @@ export async function translateManualScript(input: ManualTranslationInput, signa
   if (!completed) throw new Error("La traducción se interrumpió. No se aplicó ningún cambio.");
   const result = JSON.parse(text);
   if (result.clarification) throw new Error(result.clarification);
-  return manualScriptRecord(result.code, input.source, result.explanation || "", id);
+  return manualScriptRecord(result.code, input.source, result.explanation || "", id as never);
 }

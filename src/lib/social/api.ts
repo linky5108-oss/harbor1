@@ -1,5 +1,5 @@
 // @ts-nocheck — Local DB adapter (types differ from Supabase generics)
-import { supabase, isSchemaMissing } from "@/integrations/supabase/client";
+import { supabase, isSchemaMissing } from "@/lib/supabase/legacy-client";
 import { isCommunityPublication, hasPublicationContent } from "./feed-visibility";
 import { DEFAULT_COVER_FRAME, type CoverFrame, withCoverFrame } from "./cover-frame";
 import {

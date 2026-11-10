@@ -13,7 +13,7 @@ import {
   type ProjectMeta,
 } from "@/lib/engine/storage";
 import type { Project } from "@/lib/engine/core";
-import { supabase, hasSupabaseConfig } from "@/integrations/supabase/client";
+import { supabase, hasSupabaseConfig } from "@/lib/supabase/legacy-client";
 import { cloudSaveProject, cloudListProjects, cloudDeleteProject, type CloudProject } from "@/lib/social/api";
 import { syncAllProjects } from "@/lib/engine/cloud-sync";
 import { ArrowLeft, Cloud, CloudDownload, CloudUpload, FolderOpen, Loader2, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";

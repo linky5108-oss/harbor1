@@ -5,7 +5,7 @@ import {
   lookupLoginEmail,
   saveLoginAlias,
 } from "./login-alias";
-import { resolveLocalUsernameEmail } from "@/integrations/supabase/client";
+import { resolveLocalUsernameEmail } from "@/lib/supabase/legacy-client";
 
 /** Stub mínimo de localStorage para el entorno node de vitest. */
 function installLocalStorage(seed: Record<string, string> = {}) {

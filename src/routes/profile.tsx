@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link, Outlet, useMatch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Loader2, Sparkles } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase/legacy-client";
 import { SubPageHeader } from "@/components/social/SubPageHeader";
 import { ProfilePanel } from "@/components/social/ProfilePanel";
 import { isMod as checkMod, getMyProfile, type Profile } from "@/lib/social/api";

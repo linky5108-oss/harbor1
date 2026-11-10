@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { generateSmartStatus, type SmartStatus } from "@/lib/social/smart-status";
 import { getTrustPoints, getFollowStats } from "@/lib/social/api";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase/legacy-client";
 
 const SEVERITY_CONFIG = {
   normal: {

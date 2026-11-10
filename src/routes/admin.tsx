@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { Avatar } from "@/components/social/Avatar";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase/legacy-client";
 import {
   isMod, isAdmin, listManagedUsers, setUserModerator, type ManagedUser,
   listBannedEmails, banEmail, unbanEmail, type BannedEmail,

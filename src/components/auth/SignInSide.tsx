@@ -7,7 +7,7 @@ import {
 
 import { AsternalLogo } from "@/components/brand/AsternalLogo";
 import { SegmentedControl } from "@/components/ui/segmented";
-import { supabase, clearSupabaseCredentials, resolveLocalUsernameEmail } from "@/integrations/supabase/client";
+import { supabase, clearSupabaseCredentials, resolveLocalUsernameEmail } from "@/lib/supabase/legacy-client";
 import { AUTH_FIELD_INPUT_FOCUS_CLASS } from "@/lib/auth/field-focus";
 import { friendlyAuthError } from "@/lib/auth/friendly-error";
 import { cleanUsername, looksLikeEmail, lookupLoginEmail, saveLoginAlias } from "@/lib/auth/login-alias";
