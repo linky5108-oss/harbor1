@@ -60,7 +60,7 @@ export async function handleManualTranslation(request: Request, config: { key?: 
       } catch (error) { send({ type: "error", message: request.signal.aborted ? "Traducción detenida." : safeError(error).message }); }
       finally { controller.close(); }
     },
-    cancel() { return iterator.return?.(); },
+    cancel() { void iterator.return?.(undefined as never); },
   });
   return new Response(stream, { headers: { "Content-Type": "application/x-ndjson", "Cache-Control": "no-store, no-transform" } });
 }

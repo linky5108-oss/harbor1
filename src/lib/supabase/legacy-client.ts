@@ -7,7 +7,7 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
-import type { Database } from './types';
+type Database = any;
 
 // ───── Types ─────
 
