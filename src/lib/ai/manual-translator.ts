@@ -9,6 +9,7 @@ export async function translateManualScript(input: ManualTranslationInput, signa
       window.location.href = `/entrar?returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`;
     }
     throw new Error("Inicia sesión para traducir con Lovable AI. Tu código no se ha cambiado.");
+  }
   const response = await fetch("/api/manual-scripts", {
     method: "POST", signal,
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${data.session.access_token}` },
