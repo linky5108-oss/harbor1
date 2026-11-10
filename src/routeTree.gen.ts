@@ -14,6 +14,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as EditorRouteImport } from './routes/editor'
+import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as FeedRouteImport } from './routes/feed'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as OrbesRouteImport } from './routes/orbes'
@@ -48,6 +49,11 @@ const AuthRoute = AuthRouteImport.update({
 const EditorRoute = EditorRouteImport.update({
   id: '/editor',
   path: '/editor',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EntrarRoute = EntrarRouteImport.update({
+  id: '/entrar',
+  path: '/entrar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FeedRoute = FeedRouteImport.update({
@@ -107,6 +113,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/editor': typeof EditorRoute
+  '/entrar': typeof EntrarRoute
   '/feed': typeof FeedRoute
   '/history': typeof HistoryRoute
   '/orbes': typeof OrbesRoute
@@ -124,6 +131,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/editor': typeof EditorRoute
+  '/entrar': typeof EntrarRoute
   '/feed': typeof FeedRoute
   '/history': typeof HistoryRoute
   '/orbes': typeof OrbesRoute
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/editor': typeof EditorRoute
+  '/entrar': typeof EntrarRoute
   '/feed': typeof FeedRoute
   '/history': typeof HistoryRoute
   '/orbes': typeof OrbesRoute
@@ -161,6 +170,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/editor'
+    | '/entrar'
     | '/feed'
     | '/history'
     | '/orbes'
@@ -178,6 +188,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/editor'
+    | '/entrar'
     | '/feed'
     | '/history'
     | '/orbes'
@@ -195,6 +206,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/editor'
+    | '/entrar'
     | '/feed'
     | '/history'
     | '/orbes'
@@ -213,6 +225,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   AuthRoute: typeof AuthRoute
   EditorRoute: typeof EditorRoute
+  EntrarRoute: typeof EntrarRoute
   FeedRoute: typeof FeedRoute
   HistoryRoute: typeof HistoryRoute
   OrbesRoute: typeof OrbesRoute
@@ -259,6 +272,13 @@ declare module '@tanstack/react-router' {
       path: '/editor'
       fullPath: '/editor'
       preLoaderRoute: typeof EditorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/entrar': {
+      id: '/entrar'
+      path: '/entrar'
+      fullPath: '/entrar'
+      preLoaderRoute: typeof EntrarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/feed': {
@@ -351,6 +371,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   AuthRoute: AuthRoute,
   EditorRoute: EditorRoute,
+  EntrarRoute: EntrarRoute,
   FeedRoute: FeedRoute,
   HistoryRoute: HistoryRoute,
   OrbesRoute: OrbesRoute,
