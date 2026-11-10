@@ -4,7 +4,12 @@ import type { Script } from "@/lib/engine/scripts";
 
 export async function translateManualScript(input: ManualTranslationInput, signal?: AbortSignal, onProgress?: (text: string) => void, id?: string): Promise<Script> {
   const { data } = await supabase.auth.getSession();
-  if (!data.session) throw new Error("Inicia sesión para traducir con Lovable AI. Tu código no se ha cambiado.");
+  if (!data.session) {
+    if (typeof window !== "undefined" && window.confirm("Para traducir con IA necesitas iniciar sesión. ¿Ir a iniciar sesión ahora?")) {
+      window.location.href = `/entrar?returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+    }
+    throw new Error("Inicia sesión para traducir con Lovable AI. Tu código no se ha cambiado.");
+  }
   const response = await fetch("/api/manual-scripts", {
     method: "POST", signal,
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${data.session.access_token}` },
