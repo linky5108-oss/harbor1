@@ -164,18 +164,21 @@ export function buildStandaloneGameHtml(options: Html5GameOptions): string {
     for (const ent of sc.entities ?? []) {
       for (const s of ent.scripts ?? []) {
         if ((s.compiledJs && s.compiledJs.trim()) || (s.customLanguageCode && s.customLanguageCode.trim())) {
-          const snippet = bindManualCode(sanitizeOrUpgradeHtml5ScriptJs(
-            s.compiledJs,
-            s.customLanguageCode,
-            ent.id,
-            ent.kind,
-          ), ent.id, s.id).trim();
+          const isManualV2 = (s.compiledJs ?? "").trimStart().startsWith("// ASTERNAL_MANUAL_V2");
+          const snippet = (isManualV2
+            ? bindManualCode((s.compiledJs ?? "").trimStart(), ent.id, s.id)
+            : sanitizeOrUpgradeHtml5ScriptJs(
+                s.compiledJs,
+                s.customLanguageCode,
+                ent.id,
+                ent.kind,
+              )).trim();
           if (snippet && !collectedEntityJsChunks.some((c) => c.includes(snippet))) {
             collectedEntityJsChunks.push(snippet);
             const safeSnippet = snippet.replace(/<\/script/gi, "<\\/script");
             try {
               new Function(safeSnippet);
-              if (!s.compiledJs?.startsWith("// ASTERNAL_MANUAL_V2")) independentScriptTags.push(
+              if (!isManualV2) independentScriptTags.push(
                 `<script id="asternal-script-${escapeHtmlText(s.id)}" data-asternal-script-id="${escapeHtmlText(s.id)}" data-entity-id="${escapeHtmlText(ent.id)}">\n${safeSnippet}\n</script>`,
               );
             } catch {
