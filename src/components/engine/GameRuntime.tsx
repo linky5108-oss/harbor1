@@ -1,3 +1,4 @@
+import { bindManualCode } from "@/lib/ai/manual-script";
 import { useEffect, useRef, useState } from "react";
 import type { CustomRuntimeConfig, Entity, Project, RuntimeInput, RuntimeState, Scene, UIElement } from "@/lib/engine/core";
 import { stepScene, newRuntimeState, resolveUIRect, sortedForRender, isOnHiddenLayer, layerOpacityFor } from "@/lib/engine/core";
@@ -645,13 +646,17 @@ export function LegacyCanvasGameRuntime({
       codeStr: string | undefined,
       ownerEntity?: Entity | null,
       customLanguageCode?: string,
+      scriptId?: string,
     ) => {
-      const sanitized = sanitizeOrUpgradeHtml5ScriptJs(
-        codeStr,
-        customLanguageCode,
-        ownerEntity?.id,
-        ownerEntity?.kind,
-      ).trim();
+      const isManualV2 = (codeStr ?? "").trimStart().startsWith("// ASTERNAL_MANUAL_V2");
+      const sanitized = (isManualV2
+        ? bindManualCode((codeStr ?? "").trimStart(), ownerEntity?.id ?? "", scriptId ?? Math.random().toString(36).slice(2))
+        : sanitizeOrUpgradeHtml5ScriptJs(
+            codeStr,
+            customLanguageCode,
+            ownerEntity?.id,
+            ownerEntity?.kind,
+          )).trim();
       if (!sanitized || executedJsSnippets.has(sanitized)) return;
       executedJsSnippets.add(sanitized);
       try {
@@ -675,14 +680,16 @@ export function LegacyCanvasGameRuntime({
           sc.compiledJs && sc.compiledJs.trim()
             ? sc.compiledJs
             : compileScriptToHtml5Js(sc, ent.id, ent.kind);
-        if (js) {
+        if (js && js.trimStart().startsWith("// ASTERNAL_MANUAL_V2")) {
+          runJsSnippet(js, ent, sc.customLanguageCode, sc.id);
+        } else if (js) {
           sc.compiledJs = sanitizeOrUpgradeHtml5ScriptJs(
             js,
             sc.customLanguageCode,
             ent.id,
             ent.kind,
           );
-          runJsSnippet(sc.compiledJs, ent, sc.customLanguageCode);
+          runJsSnippet(sc.compiledJs, ent, sc.customLanguageCode, sc.id);
         }
       }
     }
