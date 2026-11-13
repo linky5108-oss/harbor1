@@ -865,6 +865,25 @@ function InspectorPanel({
 
         <SceneBgImage scene={scene} onChange={onChangeScene} />
 
+        <div>
+          <label className="text-[10px] font-display tracking-widest text-muted-foreground">CÁMARA</label>
+          <div className="grid grid-cols-3 gap-1.5 mt-1">
+            {([["follow","Seguir"],["horizontal","Solo X"],["fixed","Fija"]] as const).map(([m,l]) => (
+              <button key={m} onClick={() => onChangeScene({ ...scene, cameraMode: m })}
+                aria-pressed={(scene.cameraMode ?? "follow") === m}
+                className={`py-2 rounded-lg border text-xs font-semibold transition ${(scene.cameraMode ?? "follow") === m ? "border-primary text-primary bg-primary/10" : "border-line-strong bg-card text-ink-2"}`}
+              >{l}</button>
+            ))}
+          </div>
+          <label className="mt-2 flex items-center justify-between gap-2 text-xs text-ink-2">
+            <span>Limitar a los bordes del mapa</span>
+            <input type="checkbox" checked={scene.cameraClamp !== false}
+              onChange={e => onChangeScene({ ...scene, cameraClamp: e.target.checked })} className="h-4 w-4 accent-primary" />
+          </label>
+        </div>
+        <Slider label="TAMAÑO DE CÁMARA (ZOOM)" value={scene.cameraZoom ?? 1} min={0.25} max={4} step={0.25}
+          onChange={v => onChangeScene({ ...scene, cameraZoom: v })} />
+
 
 
         <div>
