@@ -1,3 +1,4 @@
+import { CustomPalette } from "@/components/engine/CustomPalette";
 import {
   useEffect,
   useLayoutEffect,
@@ -3232,7 +3233,7 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512, source }
             disabled={!history.canUndo}
             title="Deshacer (Ctrl+Z)"
             aria-label="Deshacer"
-            className="hidden md:grid w-10 h-10 place-items-center rounded-full text-ink-2 hover:bg-accent hover:text-accent-foreground active:scale-95 transition disabled:opacity-35 disabled:pointer-events-none"
+            className="grid w-10 h-10 place-items-center rounded-full text-ink-2 hover:bg-accent hover:text-accent-foreground active:scale-95 transition disabled:opacity-35 disabled:pointer-events-none"
           >
             <Undo2 size={18} />
           </button>
@@ -3241,7 +3242,7 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512, source }
             disabled={!history.canRedo}
             title="Rehacer (Ctrl+Shift+Z)"
             aria-label="Rehacer"
-            className="hidden md:grid w-10 h-10 place-items-center rounded-full text-ink-2 hover:bg-accent hover:text-accent-foreground active:scale-95 transition disabled:opacity-35 disabled:pointer-events-none"
+            className="grid w-10 h-10 place-items-center rounded-full text-ink-2 hover:bg-accent hover:text-accent-foreground active:scale-95 transition disabled:opacity-35 disabled:pointer-events-none"
           >
             <Redo2 size={18} />
           </button>
@@ -3311,27 +3312,7 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512, source }
               </button>
             );
           })}
-          {/* Historial en el dock móvil (en escritorio vive en la barra superior) */}
-          <span className="md:hidden shrink-0 w-px self-stretch my-2 bg-line" aria-hidden />
-          <button
-            onClick={undo}
-            disabled={!history.canUndo}
-            title="Deshacer (Ctrl+Z)"
-            aria-label="Deshacer"
-            className="md:hidden shrink-0 grid place-items-center w-10 h-10 rounded-full text-ink-2 hover:bg-accent hover:text-accent-foreground active:scale-95 transition disabled:opacity-35 disabled:pointer-events-none"
-          >
-            <Undo2 size={19} />
-          </button>
-          <button
-            onClick={redo}
-            disabled={!history.canRedo}
-            title="Rehacer (Ctrl+Shift+Z)"
-            aria-label="Rehacer"
-            className="md:hidden shrink-0 grid place-items-center w-10 h-10 rounded-full text-ink-2 hover:bg-accent hover:text-accent-foreground active:scale-95 transition disabled:opacity-35 disabled:pointer-events-none"
-          >
-            <Redo2 size={19} />
-          </button>
-        </nav>
+          </nav>
 
         {/* ── Visor del lienzo ─────────────────────────────────────────────── */}
         <div className="order-1 md:order-2 flex-1 min-w-0 min-h-0 flex flex-col bg-surface-2/50">
@@ -3365,6 +3346,7 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512, source }
                     <button key={c} aria-label={`Color ${c}`} aria-pressed={color === c.toLowerCase()} onClick={() => paintColor(c)} className={`aspect-square rounded-lg border border-line ${color === c.toLowerCase() ? "ring-2 ring-primary ring-offset-2 ring-offset-popover" : "hover:scale-105"}`} style={{ background: c }} />
                   ))}
                 </div>
+                <CustomPalette current={color} onPick={paintColor} />
                 {recent.length > 0 && (
                   <div className="mt-3">
                     <p className="mb-2 text-xs text-muted-foreground">Recientes</p>

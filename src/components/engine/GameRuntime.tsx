@@ -868,41 +868,49 @@ export function LegacyCanvasGameRuntime({
         }
       }
 
-      ctx.strokeStyle = "rgba(56,189,248,0.10)";
-      ctx.lineWidth = 1;
-      let off = (-state.cameraX * 0.4) % 40;
-      if (off < 0) off += 40;
-      ctx.beginPath();
-      for (let x = off; x < W; x += 40) { ctx.moveTo(x, 0); ctx.lineTo(x, H); }
-      for (let y = 0; y < H; y += 40) { ctx.moveTo(0, y); ctx.lineTo(W, y); }
-      ctx.stroke();
 
       // Fixed-size camera: adjusts framing based on cameraOrientation ("horizontal" vs "vertical").
       const isVerticalCam = cameraOrientation === "vertical";
       const VIEW_W = 540;
       const VIEW_H = 700;
-      const scale = isVerticalCam ? W / VIEW_W : H / VIEW_H;
-      const viewW = isVerticalCam ? VIEW_W : W / scale;
-      const viewH = isVerticalCam ? H / scale : VIEW_H;
+      let scale = isVerticalCam ? W / VIEW_W : H / VIEW_H;
+      let viewW = isVerticalCam ? VIEW_W : W / scale;
+      let viewH = isVerticalCam ? H / scale : VIEW_H;
       const player = work.entities.find((e) => e.controllable && e.x > -9000);
-      let camX = state.cameraX;
-      let camY = 0;
-      if (player) {
+      var camMode = (work as any).cameraMode || "follow";
+      var camClamp = (work as any).cameraClamp !== false;
+      var camZoom = Math.max(0.25, Math.min(4, Number((work as any).cameraZoom) || 1));
+      scale = scale * camZoom; viewW = viewW / camZoom; viewH = viewH / camZoom;
+      var camX = state.cameraX;
+      var camY = 0;
+      if (player && camMode !== "fixed") {
         camX = player.x + player.w / 2 - viewW / 2;
-        camY = player.y + player.h / 2 - viewH / 2;
-        if (work.width > viewW) camX = Math.max(0, Math.min(work.width - viewW, camX));
-        else camX = (work.width - viewW) / 2;
-        if (work.height > viewH) camY = Math.max(0, Math.min(work.height - viewH, camY));
-        else camY = (work.height - viewH) / 2;
+        camY = camMode === "horizontal" ? (work.height - viewH) / 2 : player.y + player.h / 2 - viewH / 2;
+        if (camClamp) {
+          if (work.width > viewW) camX = Math.max(0, Math.min(work.width - viewW, camX));
+          else camX = (work.width - viewW) / 2;
+          if (work.height > viewH) camY = Math.max(0, Math.min(work.height - viewH, camY));
+          else camY = (work.height - viewH) / 2;
+        }
         state.cameraX = camX;
       } else {
+        camX = camMode === "fixed" ? 0 : camX;
         if (work.width <= viewW) camX = (work.width - viewW) / 2;
-        if (work.height > viewH) camY = Math.max(0, Math.min(work.height - viewH, (work.height - viewH) / 2));
+        if (work.height > viewH) camY = camMode === "fixed" ? 0 : (work.height - viewH) / 2;
         else camY = (work.height - viewH) / 2;
       }
       runtimeApi.camera.x = camX;
       runtimeApi.camera.y = camY;
       runtimeApi.camera.scale = scale;
+      ctx.strokeStyle = "rgba(56,189,248,0.10)";
+      ctx.lineWidth = 1;
+      let off = (-camX * scale * 0.4) % 40;
+      if (off < 0) off += 40;
+      ctx.beginPath();
+      for (let x = off; x < W; x += 40) { ctx.moveTo(x, 0); ctx.lineTo(x, H); }
+      let offY = (-camY * scale * 0.4) % 40; if (offY < 0) offY += 40;
+      for (let y = offY; y < H; y += 40) { ctx.moveTo(0, y); ctx.lineTo(W, y); }
+      ctx.stroke();
 
       const sx = shake.time > 0 ? (Math.random() - 0.5) * shake.intensity : 0;
       const sy = shake.time > 0 ? (Math.random() - 0.5) * shake.intensity : 0;

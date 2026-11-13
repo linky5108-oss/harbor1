@@ -3093,14 +3093,6 @@ export function buildStandaloneGameHtml(options: Html5GameOptions): string {
       }
     }
 
-    ctx.strokeStyle = "rgba(56,189,248,0.10)";
-    ctx.lineWidth = 1;
-    var off = (-state.cameraX * 0.4) % 40;
-    if (off < 0) off += 40;
-    ctx.beginPath();
-    for (var gx = off; gx < W; gx += 40) { ctx.moveTo(gx, 0); ctx.lineTo(gx, H); }
-    for (var gy = 0; gy < H; gy += 40) { ctx.moveTo(0, gy); ctx.lineTo(W, gy); }
-    ctx.stroke();
 
     var isVerticalCam = CONFIG.cameraOrientation === "vertical";
     var VIEW_W = 540;
@@ -3112,24 +3104,40 @@ export function buildStandaloneGameHtml(options: Html5GameOptions): string {
     for (var pi = 0; pi < work.entities.length; pi++) {
       if (work.entities[pi].controllable && work.entities[pi].x > -9000) { player = work.entities[pi]; break; }
     }
+    var camMode = (work).cameraMode || "follow";
+    var camClamp = (work).cameraClamp !== false;
+    var camZoom = Math.max(0.25, Math.min(4, Number((work).cameraZoom) || 1));
+    scale = scale * camZoom; viewW = viewW / camZoom; viewH = viewH / camZoom;
     var camX = state.cameraX;
     var camY = 0;
-    if (player) {
+    if (player && camMode !== "fixed") {
       camX = player.x + player.w / 2 - viewW / 2;
-      camY = player.y + player.h / 2 - viewH / 2;
-      if (work.width > viewW) camX = Math.max(0, Math.min(work.width - viewW, camX));
-      else camX = (work.width - viewW) / 2;
-      if (work.height > viewH) camY = Math.max(0, Math.min(work.height - viewH, camY));
-      else camY = (work.height - viewH) / 2;
+      camY = camMode === "horizontal" ? (work.height - viewH) / 2 : player.y + player.h / 2 - viewH / 2;
+      if (camClamp) {
+        if (work.width > viewW) camX = Math.max(0, Math.min(work.width - viewW, camX));
+        else camX = (work.width - viewW) / 2;
+        if (work.height > viewH) camY = Math.max(0, Math.min(work.height - viewH, camY));
+        else camY = (work.height - viewH) / 2;
+      }
       state.cameraX = camX;
     } else {
+      camX = camMode === "fixed" ? 0 : camX;
       if (work.width <= viewW) camX = (work.width - viewW) / 2;
-      if (work.height > viewH) camY = Math.max(0, Math.min(work.height - viewH, (work.height - viewH) / 2));
+      if (work.height > viewH) camY = camMode === "fixed" ? 0 : (work.height - viewH) / 2;
       else camY = (work.height - viewH) / 2;
     }
     runtimeApi.camera.x = camX;
     runtimeApi.camera.y = camY;
     runtimeApi.camera.scale = scale;
+    ctx.strokeStyle = "rgba(56,189,248,0.10)";
+    ctx.lineWidth = 1;
+    var off = (-camX * scale * 0.4) % 40;
+    if (off < 0) off += 40;
+    ctx.beginPath();
+    for (var gx = off; gx < W; gx += 40) { ctx.moveTo(gx, 0); ctx.lineTo(gx, H); }
+    var offY = (-camY * scale * 0.4) % 40; if (offY < 0) offY += 40;
+    for (var gy = offY; gy < H; gy += 40) { ctx.moveTo(0, gy); ctx.lineTo(W, gy); }
+    ctx.stroke();
 
     var sx = shake.time > 0 ? (Math.random() - 0.5) * shake.intensity : 0;
     var sy = shake.time > 0 ? (Math.random() - 0.5) * shake.intensity : 0;

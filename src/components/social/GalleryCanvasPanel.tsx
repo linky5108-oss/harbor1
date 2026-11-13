@@ -1,3 +1,4 @@
+import { CustomPalette } from "@/components/engine/CustomPalette";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Pencil, Eraser, PaintBucket, Slash, Square, Circle, Pipette, Type, Move,
@@ -1364,6 +1365,7 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
                   }} aria-label={c} />
                 ))}
               </div>
+              <CustomPalette current={color} onPick={setColor} />
               <div className="flex items-center gap-1.5">
                 <span className="text-sm font-semibold text-muted-foreground/90 w-14 shrink-0">Grosor</span>
                 <input type="range" min={1} max={48} value={width} onChange={e => setWidth(Number(e.target.value))} className="flex-1 accent-primary h-2.5" />

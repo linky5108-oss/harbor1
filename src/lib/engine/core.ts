@@ -219,6 +219,12 @@ export interface Scene {
   layers?: SceneLayer[];         // Z-ordered scene layers
   startLives?: number;
   ui?: UIElement[];
+  /** Limitar la cámara a los bordes del mapa (por defecto true). */
+  cameraClamp?: boolean;
+  /** Zoom de la cámara del jugador (1 = normal). */
+  cameraZoom?: number;
+  /** follow = sigue al jugador, horizontal = solo eje X, fixed = cámara quieta. */
+  cameraMode?: "follow" | "horizontal" | "fixed";
 }
 
 export const DEFAULT_LAYER_ID = "default";
