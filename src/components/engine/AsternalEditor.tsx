@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { Settings, Layers, Copy, X, Eye, EyeOff, Lock, Unlock, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, Trash2, Plus, Upload, Home, MousePointer2, Boxes, Eraser, SlidersHorizontal, Image as ImageIcon, Layers3, Play, LibraryBig, Save, Pencil, Sparkles, Code2 } from "lucide-react";
+import { Settings, Layers, Copy, X, Eye, EyeOff, Lock, Unlock, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, Trash2, Plus, Upload, Home, MousePointer2, Boxes, Eraser, SlidersHorizontal, Image as ImageIcon, Layers3, Play, LibraryBig, Save, Pencil, Sparkles, Code2, Undo2, Redo2 } from "lucide-react";
 import { schedulePushToCloud, scheduleAssetLibraryPush, pullAssetLibraryFromCloud, activateCloudProjectIfBlank } from "@/lib/engine/cloud-sync";
 import { supabase } from "@/lib/supabase/legacy-client";
 import { Link, useRouter } from "@tanstack/react-router";
@@ -115,6 +115,22 @@ export function AsternalEditor({ initialProjectId, beta = false }: {
 
   const formFactor = useFormFactor();
   const isTablet = formFactor === "tablet" || formFactor === "desktop";
+
+  // ── Deshacer / Rehacer: instantáneas del proyecto ────────────────────
+  const undoStack = useRef<Project[]>([]);
+  const redoStack = useRef<Project[]>([]);
+  const lastProjectRef = useRef<Project | null>(null);
+  const applyingHistoryRef = useRef(false);
+  const lastHistoryPushAtRef = useRef(0);
+  const projectRef = useRef<Project | null>(null);
+  const [, setHistoryTick] = useState(0);
+  const resetHistory = (p: Project | null) => {
+    undoStack.current = [];
+    redoStack.current = [];
+    lastProjectRef.current = p;
+    applyingHistoryRef.current = false;
+    setHistoryTick(t => t + 1);
+  };
 
   useEffect(() => {
     setLang("es");
